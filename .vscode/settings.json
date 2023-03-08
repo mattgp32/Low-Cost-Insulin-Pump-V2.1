@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "inttypes.h": "c",
+        "task.h": "c",
+        "motor.h": "c"
+    }
+}
