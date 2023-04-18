@@ -25,6 +25,7 @@ void led_five_flash();
 void led_double_flash();
 void buzzer_init(void);
 void annoying_buzzer(void* arg);
+void no_br_warning(void*arg);
 
 #ifdef _cplusplus
 }

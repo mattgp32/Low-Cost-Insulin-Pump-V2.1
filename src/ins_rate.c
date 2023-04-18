@@ -16,10 +16,31 @@
 #include "freertos/semphr.h"
 #include "leds.h"
 #include "time.h"
+#include "sys/time.h"
+#include "driver/gptimer.h"
+#include "motor.h"
 
+#define STEPS_PER_UNIT 729
+#define SECONDS_TO_MS 1000
+#define THREE_MINUTES 180
+#define SECONDS_IN_AN_HOUR 3600
+#define MIN_DELIVERY_SIZE 25
+#define MIN_DELIVERY_STEPS 18
+#define MIN_BOLUS_DELIVERY_SIZE 50
+#define MIN_BOLUS_DELIVERY_STEPS 36
 
 uint8_t index_arr[2] = {0};
+time_t esp_time;
+time_t actual_time;
+time_t unix_modifier = 0;
+struct tm * timeinfo;
 
+QueueHandle_t bolus_delivery_queue;
+
+TickType_t frequency = 1000;
+int basal_info_array[2];
+
+bool bolus_ready = false;
 
 // Function to slice a string and find the index of two asterisks contained within it
 void slice_string(const char *data)
@@ -34,7 +55,6 @@ void slice_string(const char *data)
             index_arr[index] = i;
             index++;
         }
-
     }
 }
 
@@ -53,15 +73,22 @@ void write_bolus_data(int delivery_amount)
 {
     nvs_handle_t bo_handle;
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
-    nvs_set_i16(bo_handle, "bolus_size", delivery_amount);
-    nvs_commit(bo_handle);
+    delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
+    if (delivery_amount <= 0){
+        led_double_flash();
+    }
+     nvs_set_i32(bo_handle, "bolus_size", delivery_amount);
+     nvs_commit(bo_handle);
 }
-
 
 void write_basal_rate_data(int delivery_amount)
 {
     nvs_handle_t br_handle;
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READWRITE, &br_handle);
+    delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
+    if (delivery_amount <= 0){
+        led_double_flash();
+    }
     
     // switch (ret)
     // {
@@ -82,7 +109,7 @@ void write_basal_rate_data(int delivery_amount)
     //     break;
     // }
 
-    nvs_set_i16(br_handle, "basal_rate", delivery_amount);
+    nvs_set_i32(br_handle, "basal_rate", delivery_amount);
 
     // switch (ret)
     // {
@@ -121,33 +148,81 @@ void write_basal_rate_data(int delivery_amount)
     // }
 }
 
+int set_delivery_frequency(void)
+{
+    int basal_rate = 0;
+    nvs_handle_t br_handle;
+
+    nvs_flash_init_partition("rate_storage");
+    nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
+    nvs_get_i32(br_handle, "basal_rate", &basal_rate);
+
+    int dels_per_hour = basal_rate / MIN_DELIVERY_SIZE;
+    int dels_freq;
+
+    if (dels_per_hour <=0) {
+        dels_freq = 0;
+    } else if (dels_per_hour < 20){
+        dels_freq = SECONDS_IN_AN_HOUR/dels_per_hour; //seconds between doses = dels_freq
+    }
+    else {
+        dels_freq = THREE_MINUTES;
+    }
+    basal_info_array[0] = dels_per_hour;
+    basal_info_array[1] = basal_rate;
+
+    return dels_freq;
+}
+
 void read_and_store_data(const char *data)
 {
-    char delivery_type[2];
-    uint8_t len = (index_arr[1] - index_arr[0])-1;
-    char delivery_amount[len];
-    strncpy(delivery_type, data, 2);
-    slice_string(data);
-    //printf("%s\n", delivery_type);
-    if (index_arr[0] == 0 || index_arr[1] == 0 ){
-        //printf("ERROR - INCORRECT ENTRY FORMAT\n");
+    char data_type[3];
+    strncpy(data_type, data, 2);
+    data_type[2] = '\0';
+    printf("The data type here is %s\n", data_type);
+    
+    if(strcmp(data_type, "TI") == 0){
+        //printf("This is a time type\n");
+        slice_string(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char unix_time[index_arr[1]-index_arr[0]];
+        strncpy(&unix_time[0], &data[index_arr[0]+1], index_arr[1]-index_arr[0]-1);
+        unix_time[10] = '\0';
+         unix_modifier = atoi(unix_time);
+        //printf("UNIX time = %lld\n", unix_modifier);
+
+    } else if (strcmp(data_type, "BA") == 0) {
+        float basal_rate = 0;
+        int basal_rate_i = 0;
+        //printf("This is of basal insulin delivery type\n");
+        slice_string(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char basal_delivery[index_arr[1]-index_arr[0]];
+        basal_delivery[index_arr[1]-index_arr[0]-1] = '\0';
+        strncpy(basal_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
+        basal_rate = atof(basal_delivery);
+        basal_rate_i = basal_rate*1000;
+        //printf("Current basal rate is %d\n", basal_rate_i);
+        init_rate_storage_nvs_partition();
+        write_basal_rate_data(basal_rate_i);
+
+    } else if (strcmp(data_type, "BO") == 0) {
+        float bolus_size = 0;
+        int bolus_size_i = 0;
+        //printf("This is of bolus insulin delivery type %s\n", data);
+        slice_string(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char bolus_delivery[index_arr[1]-index_arr[0]];
+        bolus_delivery[index_arr[1]-index_arr[0]-1] = '\0';
+        strncpy(bolus_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
+        bolus_size = atof(bolus_delivery);
+        bolus_size_i = bolus_size*1000;
+        printf("Entered bolus_size is %d\n", bolus_size_i);
+        init_rate_storage_nvs_partition();
+        write_bolus_data(bolus_size_i);
+        bolus_ready = true;
     } else {
-        memset(delivery_amount, 0, sizeof(delivery_amount));
-        strncpy(delivery_amount, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
-    }
-
-    float delivery_amount_f = atof(delivery_amount) * 100;
-    int delivery_amount_i = (int)delivery_amount_f;
-    //printf("%d\n", delivery_amount_i);
-    init_rate_storage_nvs_partition();
-
-    if (strcmp(delivery_type, "BA") == 0)
-    {
-        write_basal_rate_data(delivery_amount_i);
-        led_five_flash();
-    } else if (strcmp(delivery_type, "BO") == 0) {
-        write_bolus_data(delivery_amount_i);
-        led_double_flash(); 
+         //printf("You have entered an invalid type\n");
     }
 }
 
@@ -156,35 +231,83 @@ void retreive_data(void* arg)
 {
     for(;;)
     {
-    int16_t basal_rate = 0;
-    int16_t bolus_size = 0;
+    int basal_rate = 0;
+    int bolus_size = 0;
+    
+    setenv("TZ", "UTC-12", 1);
+    tzset();
+    actual_time = time(&esp_time) + unix_modifier;
+    timeinfo = localtime(&actual_time);
+    
+    printf ("Current local time and date: %s", asctime(timeinfo));
+
     nvs_handle_t br_handle;
     nvs_handle_t bo_handle;
     nvs_flash_init_partition("rate_storage");
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
-    nvs_get_i16(br_handle, "basal_rate", &basal_rate);
-    nvs_get_i16(bo_handle, "bolus_size", &bolus_size);
+    nvs_get_i32(br_handle, "basal_rate", &basal_rate);
+    nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
     printf("Current basal rate is %d\n", basal_rate);
     printf("Current bolus amount is %d\n", bolus_size);
     vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
 
-void get_current_time(void* arg)
+void give_insulin(void* arg)
 {
     for(;;)
     {
-        time_t now = (1679964113);
-        char strftime_buf[64];
-        struct tm timeinfo;
+        frequency = set_delivery_frequency() * SECONDS_TO_MS;
 
-        setenv("TZ", "UTC-13", 1);
-        tzset();
-
-        localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-        printf("The currect time in shnaghai is: %s\n", strftime_buf);
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        if (frequency <= 0) {
+            puts("basal rate is 0");
+            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
+        } else {
+        puts("Entered motor control block\n");
+        turn_x_steps(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+        }
+    vTaskDelay(pdMS_TO_TICKS(frequency));
     }
+}
+
+void bolus_delivery(void* arg)
+{
+    for(;;)
+    {
+        nvs_handle_t bo_handle;
+        int bolus_size = 0;
+
+        if(bolus_ready == true)
+        {
+            nvs_flash_init_partition("rate_storage");
+            nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);   
+            nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
+
+            if((bolus_size/MIN_DELIVERY_SIZE) == 0){
+                puts("ReQueSteD bOLuS iS ToO SMalL!!!");
+                led_double_flash();
+            } else {
+                int n_steps = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
+                printf("Delivering %d doses of 0.05U\n", n_steps);
+                for(int i = 0; i < n_steps; i++){
+                    turn_x_steps(true, MIN_BOLUS_DELIVERY_STEPS);
+                    vTaskDelay(pdMS_TO_TICKS(1200));
+                }
+
+                if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
+                    turn_x_steps(true, MIN_DELIVERY_STEPS);
+                    puts("Delivering 1 dose of 0.025U");
+                }
+
+                puts("Bolus delivery complete");
+
+            }
+
+        }
+        nvs_set_i32(bo_handle, "bolus_size", 0);
+        nvs_commit(bo_handle);
+        bolus_ready = false;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    } 
 }

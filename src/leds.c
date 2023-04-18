@@ -15,6 +15,9 @@
 #include "adc.h"
 #include "leds.h"
 #include "driver/ledc.h"
+#include "nvs_flash.h"
+#include "esp_system.h"
+#include "esp_log.h"
 
 #define LEDC_TIMER              LEDC_TIMER_0
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
@@ -163,4 +166,21 @@ void annoying_buzzer(void* arg)
    ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY);
    vTaskDelay(pdMS_TO_TICKS(1000));
    }
+}
+
+void no_br_warning(void*arg)
+{
+   for(;;){
+   int basal_rate = 0;
+   nvs_handle_t br_handle;
+   nvs_flash_init_partition("rate_storage");
+   nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
+   nvs_get_i32(br_handle, "basal_rate", &basal_rate);
+
+   if(basal_rate == 0)
+   {
+      led_double_flash();
+   }
+   vTaskDelay(pdMS_TO_TICKS(10000));
+}
 }

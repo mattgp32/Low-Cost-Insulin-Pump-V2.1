@@ -23,6 +23,8 @@ void init_rate_storage_nvs_partition(void);
 void write_basal_rate_data(int delivery_amount);
 void retreive_data(void* arg);
 void get_current_time(void* arg);
+void give_insulin(void* arg);
+void bolus_delivery(void* arg);
 
 #ifdef _cplusplus
 }

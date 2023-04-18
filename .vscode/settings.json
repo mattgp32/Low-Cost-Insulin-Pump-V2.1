@@ -4,6 +4,9 @@
         "task.h": "c",
         "motor.h": "c",
         "freertos.h": "c",
-        "event_groups.h": "c"
+        "event_groups.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c"
     }
 }
