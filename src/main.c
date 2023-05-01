@@ -33,7 +33,7 @@ void app_main(void)
     xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
     xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
     xTaskCreate(process_bt_data, "print data from bt buffer",8192, NULL, 10, NULL);
-    //xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
+    xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
     xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 5, NULL);
     xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 20, NULL);
     xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 21, NULL);
