@@ -1,33 +1,31 @@
-/* This module written by Matt Payne as part of the Bluetooth insulin pump project.
-   This module is used to store and control insulin delivery data
-   Started on 20/3/2023
-*/
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#include "stdint.h"
-#include "string.h"
-#include "stdio.h"
-#include "nvs_flash.h"
-#include "esp_system.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "freertos/queue.h" 
-#include "freertos/semphr.h"
-#include "leds.h"
-#include "time.h"
-#include "sys/time.h"
-#include "driver/gptimer.h"
-#include "motor.h"
+#include "ins_rate.h"
 
-#define STEPS_PER_UNIT 729
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE DEFINITIONS                                  */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#define MOTOR_PIN_STEPS_PER_UNIT 729
 #define SECONDS_TO_MS 1000
 #define THREE_MINUTES 180
 #define SECONDS_IN_AN_HOUR 3600
 #define MIN_DELIVERY_SIZE 25
-#define MIN_DELIVERY_STEPS 18
+#define MIN_DELIVERY_MOTOR_PIN_STEPS 18
 #define MIN_BOLUS_DELIVERY_SIZE 50
-#define MIN_BOLUS_DELIVERY_STEPS 36
+#define MIN_BOLUS_DELIVERY_MOTOR_PIN_STEPS 36
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE TYPES                                        */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE PROTOTYPES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE VARIABLES                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 uint8_t index_arr[2] = {0};
 time_t esp_time;
@@ -42,8 +40,14 @@ int basal_info_array[2];
 
 bool bolus_ready = false;
 
-// Function to slice a string and find the index of two asterisks contained within it
-void slice_string(const char *data)
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC FUNCTIONS                                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/*
+ * Function to slice a string and find the index of two asterisks contained within it
+ */
+void slice_string ( const char *data ) 
 {
     uint8_t index = 0;
     memset(index_arr, 0, sizeof(index_arr));
@@ -58,7 +62,10 @@ void slice_string(const char *data)
     }
 }
 
-void init_rate_storage_nvs_partition(void)
+/*
+ * Function Description
+ */
+void init_rate_storage_nvs_partition ( void )
 {
     
     //esp_err_t ret;
@@ -69,7 +76,10 @@ void init_rate_storage_nvs_partition(void)
     // }
 }
 
-void write_bolus_data(int delivery_amount)
+/*
+ * Function Description
+ */
+void write_bolus_data ( int delivery_amount )
 {
     nvs_handle_t bo_handle;
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
@@ -81,7 +91,10 @@ void write_bolus_data(int delivery_amount)
      nvs_commit(bo_handle);
 }
 
-void write_basal_rate_data(int delivery_amount)
+/*
+ * Function Description
+ */
+void write_basal_rate_data ( int delivery_amount )
 {
     nvs_handle_t br_handle;
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READWRITE, &br_handle);
@@ -148,7 +161,10 @@ void write_basal_rate_data(int delivery_amount)
     // }
 }
 
-int set_delivery_frequency(void)
+/*
+ * Function Description
+ */
+int set_delivery_frequency ( void )
 {
     int basal_rate = 0;
     nvs_handle_t br_handle;
@@ -174,7 +190,10 @@ int set_delivery_frequency(void)
     return dels_freq;
 }
 
-void read_and_store_data(const char *data)
+/*
+ * Function Description
+ */
+void read_and_store_data ( const char *data )
 {
     char data_type[3];
     strncpy(data_type, data, 2);
@@ -226,8 +245,10 @@ void read_and_store_data(const char *data)
     }
 }
 
-//Just used for checking if nvs and BT was working, not used in final version
-void retreive_data(void* arg)
+/*
+ * Just used for checking if nvs and BT was working, not used in final version
+ */
+void retreive_data ( void* arg )
 {
     for(;;)
     {
@@ -254,7 +275,10 @@ void retreive_data(void* arg)
     }
 }
 
-void give_insulin(void* arg)
+/*
+ * Function Description
+ */
+void give_insulin ( void* arg )
 {
     for(;;)
     {
@@ -265,13 +289,16 @@ void give_insulin(void* arg)
             frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
         } else {
         puts("Entered motor control block\n");
-        turn_x_steps(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+        MOTOR_turnSteps(true, (int)(MOTOR_PIN_STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
         }
     vTaskDelay(pdMS_TO_TICKS(frequency));
     }
 }
 
-void bolus_delivery(void* arg)
+/*
+ * Function Description
+ */
+void bolus_delivery ( void* arg )
 {
     for(;;)
     {
@@ -288,15 +315,15 @@ void bolus_delivery(void* arg)
                 puts("ReQueSteD bOLuS iS ToO SMalL!!!");
                 led_double_flash();
             } else {
-                int n_steps = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
-                printf("Delivering %d doses of 0.05U\n", n_steps);
-                for(int i = 0; i < n_steps; i++){
-                    turn_x_steps(true, MIN_BOLUS_DELIVERY_STEPS);
+                int n_MOTOR_PIN_STEPs = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
+                printf("Delivering %d doses of 0.05U\n", n_MOTOR_PIN_STEPs);
+                for(int i = 0; i < n_MOTOR_PIN_STEPs; i++){
+                    MOTOR_turnSteps(true, MIN_BOLUS_DELIVERY_MOTOR_PIN_STEPS);
                     vTaskDelay(pdMS_TO_TICKS(1200));
                 }
 
                 if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
-                    turn_x_steps(true, MIN_DELIVERY_STEPS);
+                    MOTOR_turnSteps(true, MIN_DELIVERY_MOTOR_PIN_STEPS);
                     puts("Delivering 1 dose of 0.025U");
                 }
 
@@ -311,3 +338,17 @@ void bolus_delivery(void* arg)
         vTaskDelay(pdMS_TO_TICKS(1000));
     } 
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* EVENT HANDLERS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* INTERRUPT ROUTINES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
