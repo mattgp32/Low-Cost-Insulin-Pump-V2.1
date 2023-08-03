@@ -1,6 +1,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-#ifndef BATTERYMANAGER_H_INCLUDED
-#define BATTERYMANAGER_H_INCLUDED
+#ifndef BATTERY_H_INCLUDED
+#define BATTERY_H_INCLUDED
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #include "stdint.h"
@@ -27,13 +27,13 @@
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void    BATTERY_init            ( void );
-void    BATTERY_printBattLevel  ( void );
+void BATTERY_init            ( void );
+void BATTERY_printBattLevel  ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-#endif /* BATTERYMANAGER_H_INCLUDED */
+#endif /* BATTERY_H_INCLUDED */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

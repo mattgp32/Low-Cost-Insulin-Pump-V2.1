@@ -17,7 +17,6 @@
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
-// #include "ble_comp_test.h"
 #include "driver/ledc.h"
 #include "nvs_flash.h"
 #include "esp_system.h"

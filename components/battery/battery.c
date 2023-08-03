@@ -22,7 +22,7 @@ void task_BATTERY_handler ( void* arg );
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static QueueHandle_t battLevelQueue = NULL;
+QueueHandle_t battLevelQueue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -75,9 +75,9 @@ void task_BATTERY_handler ( void* arg )
         int adc_raw_value = 0;
         int *pBatt_level;
 
-        battLevelQueue = xQueueCreate(3, sizeof(int));
+        battLevelQueue = xQueueCreate( 3, sizeof(int) );
 
-        if ( battLevelQueue==0 ) {
+        if ( battLevelQueue == 0 ) {
             //printf("Uh oh, the battery level queue craetion failed!");
         }
 

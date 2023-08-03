@@ -23,6 +23,16 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void    task_INS_RATE_retreiveData  ( void *arg );
+void    task_INS_RATE_giveInsulin   ( void *arg );
+void    task_INS_RATE_bolusDelivery ( void * arg );
+
+void    INS_RATE_sliceString                    ( const char * );
+void    INS_RATE_initRateStoragePartitionNVS    ( void );
+void    INS_RATE_writeDataBolus                 ( int );
+void    INS_RATE_writeDataBasalRate             ( int delivery_amount );
+int     INS_RATE_setDeliveryFrequency           ( void );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -45,9 +55,187 @@ bool bolus_ready = false;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
+ * Initialise ...
+ */
+void INS_RATE_Init ( void )
+{
+    // Initialsie RTOS Handler Tasks
+    xTaskCreate(task_INS_RATE_retreiveData,  "Insulin Rate Retreive Data Task", CONFIG_INS_RATE_RETREIVE_TASK_HEAP*1024,      NULL, CONFIG_INS_RATE_RETREIVE_TASK_PRIORITY,      NULL);
+    xTaskCreate(task_INS_RATE_giveInsulin,   "Insulin Rate Give Insulin Task",  CONFIG_INS_RATE_GIVE_INSULIN_TASK_HEAP*1024,  NULL, CONFIG_INS_RATE_GIVE_INSULIN_TASK_PRIORITY,  NULL);
+    xTaskCreate(task_INS_RATE_bolusDelivery, "Insulin Rate Deliver Bolus Task", CONFIG_INS_RATE_DELIVER_BOLUS_TASK_HEAP*1042, NULL, CONFIG_INS_RATE_DELIVER_BOLUS_TASK_PRIORITY, NULL);
+}
+
+/*
+ * Function Description
+ */
+void INS_RATE_dataReadAndStore ( const char *data )
+{
+    char data_type[3];
+    strncpy(data_type, data, 2);
+    data_type[2] = '\0';
+    printf("The data type here is %s\n", data_type);
+    
+    if(strcmp(data_type, "TI") == 0){
+        //printf("This is a time type\n");
+        INS_RATE_sliceString(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char unix_time[index_arr[1]-index_arr[0]];
+        strncpy(&unix_time[0], &data[index_arr[0]+1], index_arr[1]-index_arr[0]-1);
+        unix_time[10] = '\0';
+         unix_modifier = atoi(unix_time);
+        //printf("UNIX time = %lld\n", unix_modifier);
+
+    } else if (strcmp(data_type, "BA") == 0) {
+        float basal_rate = 0;
+        int basal_rate_i = 0;
+        //printf("This is of basal insulin delivery type\n");
+        INS_RATE_sliceString(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char basal_delivery[index_arr[1]-index_arr[0]];
+        basal_delivery[index_arr[1]-index_arr[0]-1] = '\0';
+        strncpy(basal_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
+        basal_rate = atof(basal_delivery);
+        basal_rate_i = basal_rate*1000;
+        //printf("Current basal rate is %d\n", basal_rate_i);
+        INS_RATE_initRateStoragePartitionNVS();
+        INS_RATE_writeDataBasalRate(basal_rate_i);
+
+    } else if (strcmp(data_type, "BO") == 0) {
+        float bolus_size = 0;
+        int bolus_size_i = 0;
+        //printf("This is of bolus insulin delivery type %s\n", data);
+        INS_RATE_sliceString(data);
+        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
+        char bolus_delivery[index_arr[1]-index_arr[0]];
+        bolus_delivery[index_arr[1]-index_arr[0]-1] = '\0';
+        strncpy(bolus_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
+        bolus_size = atof(bolus_delivery);
+        bolus_size_i = bolus_size*1000;
+        printf("Entered bolus_size is %d\n", bolus_size_i);
+        INS_RATE_initRateStoragePartitionNVS();
+        INS_RATE_writeDataBolus(bolus_size_i);
+        bolus_ready = true;
+    } else {
+         //printf("You have entered an invalid type\n");
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/*
+ * Just used for checking if nvs and BT was working, not used in final version
+ * Display rate data - for debugging only
+ */
+void task_INS_RATE_retreiveData ( void *arg )
+{
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
+    while(1)
+    {
+        int32_t basal_rate = 0;
+        int32_t bolus_size = 0;
+        
+        setenv("TZ", "UTC-12", 1);
+        tzset();
+        actual_time = time(&esp_time) + unix_modifier;
+        timeinfo = localtime(&actual_time);
+        
+        printf ("Current local time and date: %s", asctime(timeinfo));
+
+        nvs_handle_t br_handle;
+        nvs_handle_t bo_handle;
+        nvs_flash_init_partition("rate_storage");
+        nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
+        nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
+        nvs_get_i32(br_handle, "basal_rate", &basal_rate);
+        nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
+        printf("Current basal rate is %ld\n", basal_rate);
+        printf("Current bolus amount is %ld\n", bolus_size);
+
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_INS_RATE_RETREIVE_TASK_INTERVAL));
+    }
+}
+
+/*
+ * start insulin deliveries
+ */
+void task_INS_RATE_giveInsulin ( void* arg )
+{
+    // Loop To Infinity And Beyond
+    while(1)
+    {
+        frequency = INS_RATE_setDeliveryFrequency() * SECONDS_TO_MS;
+
+        if (frequency <= 0) {
+            puts("basal rate is 0");
+            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
+        } else {
+        puts("Entered motor control block\n");
+        MOTOR_turnSteps(true, (int)(MOTOR_PIN_STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+        }
+        vTaskDelay(pdMS_TO_TICKS(frequency));
+    }
+}
+
+/*
+ * give bolus
+ */
+void task_INS_RATE_bolusDelivery ( void* arg )
+{
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
+    while(1)
+    {
+        nvs_handle_t bo_handle;
+        int32_t bolus_size = 0;
+
+        if(bolus_ready == true)
+        {
+            nvs_flash_init_partition("rate_storage");
+            nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);   
+            nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
+
+            if((bolus_size/MIN_DELIVERY_SIZE) == 0){
+                puts("ReQueSteD bOLuS iS ToO SMalL!!!");
+                LED_doubleFlash();
+            } else {
+                int n_MOTOR_PIN_STEPs = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
+                printf("Delivering %d doses of 0.05U\n", n_MOTOR_PIN_STEPs);
+                for(int i = 0; i < n_MOTOR_PIN_STEPs; i++){
+                    MOTOR_turnSteps(true, MIN_BOLUS_DELIVERY_MOTOR_PIN_STEPS);
+                    vTaskDelay(pdMS_TO_TICKS(1200));
+                }
+
+                if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
+                    MOTOR_turnSteps(true, MIN_DELIVERY_MOTOR_PIN_STEPS);
+                    puts("Delivering 1 dose of 0.025U");
+                }
+
+                puts("Bolus delivery complete");
+
+            }
+
+        }
+        nvs_set_i32(bo_handle, "bolus_size", 0);
+        nvs_commit(bo_handle);
+        bolus_ready = false;
+        
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_INS_RATE_DELIVER_BOLUS_TASK_INTERVAL));
+    } 
+}
+
+/*
  * Function to slice a string and find the index of two asterisks contained within it
  */
-void slice_string ( const char *data ) 
+void INS_RATE_sliceString ( const char *data ) 
 {
     uint8_t index = 0;
     memset(index_arr, 0, sizeof(index_arr));
@@ -65,7 +253,7 @@ void slice_string ( const char *data )
 /*
  * Function Description
  */
-void init_rate_storage_nvs_partition ( void )
+void INS_RATE_initRateStoragePartitionNVS ( void )
 {
     
     //esp_err_t ret;
@@ -79,13 +267,13 @@ void init_rate_storage_nvs_partition ( void )
 /*
  * Function Description
  */
-void write_bolus_data ( int delivery_amount )
+void INS_RATE_writeDataBolus ( int delivery_amount )
 {
     nvs_handle_t bo_handle;
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        led_double_flash();
+        LED_doubleFlash();
     }
      nvs_set_i32(bo_handle, "bolus_size", delivery_amount);
      nvs_commit(bo_handle);
@@ -94,13 +282,13 @@ void write_bolus_data ( int delivery_amount )
 /*
  * Function Description
  */
-void write_basal_rate_data ( int delivery_amount )
+void INS_RATE_writeDataBasalRate ( int delivery_amount )
 {
     nvs_handle_t br_handle;
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READWRITE, &br_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        led_double_flash();
+        LED_doubleFlash();
     }
     
     // switch (ret)
@@ -164,9 +352,9 @@ void write_basal_rate_data ( int delivery_amount )
 /*
  * Function Description
  */
-int set_delivery_frequency ( void )
+int INS_RATE_setDeliveryFrequency ( void )
 {
-    int basal_rate = 0;
+    int32_t basal_rate = 0;
     nvs_handle_t br_handle;
 
     nvs_flash_init_partition("rate_storage");
@@ -189,159 +377,6 @@ int set_delivery_frequency ( void )
 
     return dels_freq;
 }
-
-/*
- * Function Description
- */
-void read_and_store_data ( const char *data )
-{
-    char data_type[3];
-    strncpy(data_type, data, 2);
-    data_type[2] = '\0';
-    printf("The data type here is %s\n", data_type);
-    
-    if(strcmp(data_type, "TI") == 0){
-        //printf("This is a time type\n");
-        slice_string(data);
-        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
-        char unix_time[index_arr[1]-index_arr[0]];
-        strncpy(&unix_time[0], &data[index_arr[0]+1], index_arr[1]-index_arr[0]-1);
-        unix_time[10] = '\0';
-         unix_modifier = atoi(unix_time);
-        //printf("UNIX time = %lld\n", unix_modifier);
-
-    } else if (strcmp(data_type, "BA") == 0) {
-        float basal_rate = 0;
-        int basal_rate_i = 0;
-        //printf("This is of basal insulin delivery type\n");
-        slice_string(data);
-        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
-        char basal_delivery[index_arr[1]-index_arr[0]];
-        basal_delivery[index_arr[1]-index_arr[0]-1] = '\0';
-        strncpy(basal_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
-        basal_rate = atof(basal_delivery);
-        basal_rate_i = basal_rate*1000;
-        //printf("Current basal rate is %d\n", basal_rate_i);
-        init_rate_storage_nvs_partition();
-        write_basal_rate_data(basal_rate_i);
-
-    } else if (strcmp(data_type, "BO") == 0) {
-        float bolus_size = 0;
-        int bolus_size_i = 0;
-        //printf("This is of bolus insulin delivery type %s\n", data);
-        slice_string(data);
-        //printf("Index values are at %d, %d\n", index_arr[0], index_arr[1]);
-        char bolus_delivery[index_arr[1]-index_arr[0]];
-        bolus_delivery[index_arr[1]-index_arr[0]-1] = '\0';
-        strncpy(bolus_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
-        bolus_size = atof(bolus_delivery);
-        bolus_size_i = bolus_size*1000;
-        printf("Entered bolus_size is %d\n", bolus_size_i);
-        init_rate_storage_nvs_partition();
-        write_bolus_data(bolus_size_i);
-        bolus_ready = true;
-    } else {
-         //printf("You have entered an invalid type\n");
-    }
-}
-
-/*
- * Just used for checking if nvs and BT was working, not used in final version
- */
-void retreive_data ( void* arg )
-{
-    for(;;)
-    {
-    int basal_rate = 0;
-    int bolus_size = 0;
-    
-    setenv("TZ", "UTC-12", 1);
-    tzset();
-    actual_time = time(&esp_time) + unix_modifier;
-    timeinfo = localtime(&actual_time);
-    
-    printf ("Current local time and date: %s", asctime(timeinfo));
-
-    nvs_handle_t br_handle;
-    nvs_handle_t bo_handle;
-    nvs_flash_init_partition("rate_storage");
-    nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
-    nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
-    nvs_get_i32(br_handle, "basal_rate", &basal_rate);
-    nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-    printf("Current basal rate is %d\n", basal_rate);
-    printf("Current bolus amount is %d\n", bolus_size);
-    vTaskDelay(pdMS_TO_TICKS(10000));
-    }
-}
-
-/*
- * Function Description
- */
-void give_insulin ( void* arg )
-{
-    for(;;)
-    {
-        frequency = set_delivery_frequency() * SECONDS_TO_MS;
-
-        if (frequency <= 0) {
-            puts("basal rate is 0");
-            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
-        } else {
-        puts("Entered motor control block\n");
-        MOTOR_turnSteps(true, (int)(MOTOR_PIN_STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
-        }
-    vTaskDelay(pdMS_TO_TICKS(frequency));
-    }
-}
-
-/*
- * Function Description
- */
-void bolus_delivery ( void* arg )
-{
-    for(;;)
-    {
-        nvs_handle_t bo_handle;
-        int bolus_size = 0;
-
-        if(bolus_ready == true)
-        {
-            nvs_flash_init_partition("rate_storage");
-            nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);   
-            nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-
-            if((bolus_size/MIN_DELIVERY_SIZE) == 0){
-                puts("ReQueSteD bOLuS iS ToO SMalL!!!");
-                led_double_flash();
-            } else {
-                int n_MOTOR_PIN_STEPs = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
-                printf("Delivering %d doses of 0.05U\n", n_MOTOR_PIN_STEPs);
-                for(int i = 0; i < n_MOTOR_PIN_STEPs; i++){
-                    MOTOR_turnSteps(true, MIN_BOLUS_DELIVERY_MOTOR_PIN_STEPS);
-                    vTaskDelay(pdMS_TO_TICKS(1200));
-                }
-
-                if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
-                    MOTOR_turnSteps(true, MIN_DELIVERY_MOTOR_PIN_STEPS);
-                    puts("Delivering 1 dose of 0.025U");
-                }
-
-                puts("Bolus delivery complete");
-
-            }
-
-        }
-        nvs_set_i32(bo_handle, "bolus_size", 0);
-        nvs_commit(bo_handle);
-        bolus_ready = false;
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    } 
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

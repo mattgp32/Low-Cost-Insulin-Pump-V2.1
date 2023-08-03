@@ -38,9 +38,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void BT_init            ( void );
-void print_transmission ( void* arg );
-void receive_BT_data    ( void* arg );
-void process_bt_data    ( void* arg );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

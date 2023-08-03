@@ -67,6 +67,12 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
 void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
 
+
+void print_transmission ( void* arg );
+
+void task_BLUETOOTH_Rx          ( void* arg );
+void task_BLUETOOTH_ProcessData ( void* arg );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -739,8 +745,19 @@ void BT_init ( void )
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
         return;
     }
+
+    // Initialise Bluetooth RTOS Tasks
+    xTaskCreate(task_BLUETOOTH_Rx,          "Bluetooth_Receive",      CONFIG_BLUETOOTH_RX_TASK_HEAP*1024,      NULL, CONFIG_BLUETOOTH_RX_TASK_PRIORITY,      NULL);
+    xTaskCreate(task_BLUETOOTH_ProcessData, "Bluetooth_Process_Data", CONFIG_BLUETOOTH_PROCESS_TASK_HEAP*1024, NULL, CONFIG_BLUETOOTH_PROCESS_TASK_PRIORITY, NULL);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/*
+ *
+ */
 void print_transmission ( void* arg )
 {
     while(1)
@@ -753,33 +770,46 @@ void print_transmission ( void* arg )
     }
 }
 
-void receive_BT_data ( void* arg )
+/*
+ * get data from bt buffer
+ */
+void task_BLUETOOTH_Rx ( void *arg )
 {
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
     while(1)
     {
         if (bt_data[15] == 1) {
             xSemaphoreGive(data_ready);
         }
-        vTaskDelay(pdMS_TO_TICKS(200));
+
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_BLUETOOTH_RX_TASK_INTERVAL));
     }
 }
 
-void process_bt_data ( void* arg )
+/*
+ * print data from bt buffer
+ */
+void task_BLUETOOTH_ProcessData ( void *arg )
 {
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
     while(1)
     {
         if( pdPASS == xSemaphoreTake(data_ready, 0) ) {
-            read_and_store_data(bt_data);   
+            INS_RATE_dataReadAndStore(bt_data);   
         }
         memset(bt_data, 0, sizeof(bt_data));
 
-        vTaskDelay(pdMS_TO_TICKS(200));
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_BLUETOOTH_PROCESS_TASK_INTERVAL));
     }
 }
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

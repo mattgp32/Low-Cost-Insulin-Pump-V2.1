@@ -1,4 +1,4 @@
-menu "Flow Cloud Configuration"
+menu "Insulin Pump Configuration"
 
     config BATTERY_TASK_INTERVAL
         int "Battery Handler Task Loop Interval"

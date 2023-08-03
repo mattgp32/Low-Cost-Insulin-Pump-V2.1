@@ -38,14 +38,8 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void LED_init           ( void );
-void led_1_on           ( int LED );
-void led_1_off          ( int LED );
-void display_batt_level ( void *arg);
-void led_five_flash     ( void );
-void led_double_flash   ( void );
-void BUZZER_init        ( void);
-void annoying_buzzer    ( void *arg);
-void no_br_warning      ( void *arg);
+void LED_fiveFlash      ( void );
+void LED_doubleFlash    ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

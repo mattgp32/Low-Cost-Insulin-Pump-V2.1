@@ -16,5 +16,6 @@
         "ble_comp_test.h": "c",
         "time.h": "c",
         "stdio.h": "c"
-    }
+    },
+    "idf.adapterTargetName": "esp32s3"
 }
