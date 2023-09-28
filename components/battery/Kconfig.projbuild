@@ -1,0 +1,24 @@
+menu "Insulin Pump Configuration"
+
+    config BATTERY_TASK_INTERVAL
+        int "Battery Handler Task Loop Interval"
+        default 10000
+        range 0 20000
+        help
+            Interval (in ms) between battery handler task loops 
+            
+    config BATTERY_TASK_HEAP
+        int "Battery Handler Task Heap Memory Allocation (kb)"
+        default 1
+        range 0 128
+        help
+            KB of Heap RAM to allocate for the battery handler task
+
+    config BATTERY_TASK_PRIORITY
+        int "Battery Handler Task Priority"
+        default 5
+        range 0 16
+        help
+            Task priority for the battery handler task
+
+endmenu

@@ -1,48 +1,12 @@
-/*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Unlicense OR CC0-1.0
- */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/****************************************************************************
-*
-* This demo showcases BLE GATT server. It can send adv data, be connected by client.
-* Run the gatt_client demo, the client demo will automatically connect to the gatt_server demo.
-* Client demo will enable gatt_server's notify after connection. The two devices will then exchange
-* data.
-*
-****************************************************************************/
+#include "pump_BT.h"
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "freertos/queue.h" 
-#include "freertos/semphr.h"
-#include "esp_system.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
-#include "esp_bt.h"
-#include "ins_rate.h"
-#include "esp_gap_ble_api.h"
-#include "esp_gatts_api.h"
-#include "esp_bt_defs.h"
-#include "esp_bt_main.h"
-#include "esp_gatt_common_api.h"
-
-#include "sdkconfig.h"
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE DEFINITIONS                                  */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #define GATTS_TAG "GATTS_DEMO"
-
-extern QueueHandle_t bolus_delivery_queue;
-
-///Declare the static function
-static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
-static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_TEST_A      0xFF01
@@ -55,11 +19,65 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_NUM_HANDLE_TEST_B     4
 
 #define TEST_DEVICE_NAME            "ULCIP BLE CONN"
-#define TEST_MANUFACTURER_DATA_LEN  25
+#define TEST_MANUFACTURER_DATA_LEN  25e b
 
 #define GATTS_DEMO_CHAR_VAL_LEN_MAX 0x40
 
 #define PREPARE_BUF_MAX_SIZE 1024
+
+#define adv_config_flag      (1 << 0)
+#define scan_rsp_config_flag (1 << 1)
+
+#define PROFILE_NUM 2
+#define PROFILE_A_APP_ID 0
+#define PROFILE_B_APP_ID 1
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE TYPES                                        */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+struct gatts_profile_inst {
+    esp_gatts_cb_t gatts_cb;
+    uint16_t gatts_if;
+    uint16_t app_id;
+    uint16_t conn_id;
+    uint16_t service_handle;
+    esp_gatt_srvc_id_t service_id;
+    uint16_t char_handle;
+    esp_bt_uuid_t char_uuid;
+    esp_gatt_perm_t perm;
+    esp_gatt_char_prop_t property;
+    uint16_t descr_handle;
+    esp_bt_uuid_t descr_uuid;
+};
+
+typedef struct {
+    uint8_t                 *prepare_buf;
+    int                     prepare_len;
+} prepare_type_env_t;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE PROTOTYPES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+///Declare the static function
+static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+
+void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
+void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
+
+
+void print_transmission ( void* arg );
+
+void task_BLUETOOTH_Rx          ( void* arg );
+void task_BLUETOOTH_ProcessData ( void* arg );
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE VARIABLES                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+extern QueueHandle_t bolus_delivery_queue;
 
 char bt_data[16] = {0};
 
@@ -69,6 +87,8 @@ static uint8_t char1_str[] = {0x11,0x22,0x33};
 static esp_gatt_char_prop_t a_property = 0;
 static esp_gatt_char_prop_t b_property = 0;
 
+static uint8_t adv_config_done = 0;
+
 static esp_attr_value_t gatts_demo_char1_val =
 {
     .attr_max_len = GATTS_DEMO_CHAR_VAL_LEN_MAX,
@@ -76,9 +96,6 @@ static esp_attr_value_t gatts_demo_char1_val =
     .attr_value   = char1_str,
 };
 
-static uint8_t adv_config_done = 0;
-#define adv_config_flag      (1 << 0)
-#define scan_rsp_config_flag (1 << 1)
 
 #ifdef CONFIG_SET_RAW_ADV_DATA
 static uint8_t raw_adv_data[] = {
@@ -147,24 +164,9 @@ static esp_ble_adv_params_t adv_params = {
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
 
-#define PROFILE_NUM 2
-#define PROFILE_A_APP_ID 0
-#define PROFILE_B_APP_ID 1
+static prepare_type_env_t a_prepare_write_env;
+static prepare_type_env_t b_prepare_write_env;
 
-struct gatts_profile_inst {
-    esp_gatts_cb_t gatts_cb;
-    uint16_t gatts_if;
-    uint16_t app_id;
-    uint16_t conn_id;
-    uint16_t service_handle;
-    esp_gatt_srvc_id_t service_id;
-    uint16_t char_handle;
-    esp_bt_uuid_t char_uuid;
-    esp_gatt_perm_t perm;
-    esp_gatt_char_prop_t property;
-    uint16_t descr_handle;
-    esp_bt_uuid_t descr_uuid;
-};
 
 /* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
 static struct gatts_profile_inst gl_profile_tab[PROFILE_NUM] = {
@@ -178,18 +180,12 @@ static struct gatts_profile_inst gl_profile_tab[PROFILE_NUM] = {
     },
 };
 
-typedef struct {
-    uint8_t                 *prepare_buf;
-    int                     prepare_len;
-} prepare_type_env_t;
 
-static prepare_type_env_t a_prepare_write_env;
-static prepare_type_env_t b_prepare_write_env;
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC FUNCTIONS                                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
-void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
-
-static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+static void gap_event_handler ( esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param )
 {
     switch (event) {
 #ifdef CONFIG_SET_RAW_ADV_DATA
@@ -246,7 +242,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     }
 }
 
-void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
+void example_write_event_env ( esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param )
+{
     esp_gatt_status_t status = ESP_GATT_OK;
     if (param->write.need_rsp){
         if (param->write.is_prep){
@@ -290,7 +287,8 @@ void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare
     }
 }
 
-void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
+void example_exec_write_event_env ( prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param ) 
+{
     if (param->exec_write.exec_write_flag == ESP_GATT_PREP_WRITE_EXEC){
         esp_log_buffer_hex(GATTS_TAG, prepare_write_env->prepare_buf, prepare_write_env->prepare_len);
     }else{
@@ -303,7 +301,8 @@ void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble
     prepare_write_env->prepare_len = 0;
 }
 
-static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
+static void gatts_profile_a_event_handler ( esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param ) 
+{
     switch (event) {
     case ESP_GATTS_REG_EVT:
         ESP_LOGI(GATTS_TAG, "REGISTER_APP_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
@@ -508,7 +507,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     }
 }
 
-static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
+static void gatts_profile_b_event_handler ( esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param ) 
+{
     switch (event) {
     case ESP_GATTS_REG_EVT:
         ESP_LOGI(GATTS_TAG, "REGISTER_APP_EVT, status %d, app_id %d\n", param->reg.status, param->reg.app_id);
@@ -652,7 +652,7 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     }
 }
 
-static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+static void gatts_event_handler ( esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param )
 {
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT) {
@@ -681,7 +681,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     } while (0);
 }
 
-void run_BT()
+void BT_init ( void )
 {
     // Create a semaphore to enable system to respond when data is ready:
     data_ready = xSemaphoreCreateBinary();
@@ -745,43 +745,78 @@ void run_BT()
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
         return;
     }
+
+    // Initialise Bluetooth RTOS Tasks
+    xTaskCreate(task_BLUETOOTH_Rx,          "Bluetooth_Receive",      CONFIG_BLUETOOTH_RX_TASK_HEAP*1024,      NULL, CONFIG_BLUETOOTH_RX_TASK_PRIORITY,      NULL);
+    xTaskCreate(task_BLUETOOTH_ProcessData, "Bluetooth_Process_Data", CONFIG_BLUETOOTH_PROCESS_TASK_HEAP*1024, NULL, CONFIG_BLUETOOTH_PROCESS_TASK_PRIORITY, NULL);
 }
 
-void print_transmission(void* arg)
-{
-    for(;;){
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-        for(int i = 0; (i < 15); i++)
-        {
+/*
+ *
+ */
+void print_transmission ( void* arg )
+{
+    while(1)
+    {
+        for(int i = 0; (i < 15); i++) {
             printf("%d ", bt_data[i]);
         }
         printf("\n");
         vTaskDelay(pdMS_TO_TICKS(5000));
-}
-    }
-
-void receive_BT_data(void* arg)
-{
-    for(;;){
-        if (bt_data[15] == 1) {
-        xSemaphoreGive(data_ready);
-        }
-        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
-void process_bt_data(void* arg)
+/*
+ * get data from bt buffer
+ */
+void task_BLUETOOTH_Rx ( void *arg )
 {
-    for(;;)
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
+    while(1)
     {
-        if(pdPASS == xSemaphoreTake(data_ready, 0)) {
+        if (bt_data[15] == 1) {
+            xSemaphoreGive(data_ready);
+        }
 
-            read_and_store_data(bt_data);
-            
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_BLUETOOTH_RX_TASK_INTERVAL));
     }
-    memset(bt_data, 0, sizeof(bt_data));
+}
 
-    vTaskDelay(pdMS_TO_TICKS(200));
+/*
+ * print data from bt buffer
+ */
+void task_BLUETOOTH_ProcessData ( void *arg )
+{
+    // Create Function Variables
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // Loop To Infinity And Beyond
+    while(1)
+    {
+        if( pdPASS == xSemaphoreTake(data_ready, 0) ) {
+            INS_RATE_dataReadAndStore(bt_data);   
+        }
+        memset(bt_data, 0, sizeof(bt_data));
+
+        // Loop Pacing
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_BLUETOOTH_PROCESS_TASK_INTERVAL));
+    }
 }
-}
-    
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* EVENT HANDLERS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* INTERRUPT ROUTINES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
