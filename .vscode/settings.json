@@ -7,15 +7,6 @@
         "event_groups.h": "c",
         "array": "c",
         "string": "c",
-        "string_view": "c",
-        "adc.h": "c",
-        "stdint.h": "c",
-        "ins_rate.h": "c",
-        "pump_bt.h": "c",
-        "buzzer.h": "c",
-        "ble_comp_test.h": "c",
-        "time.h": "c",
-        "stdio.h": "c"
-    },
-    "idf.adapterTargetName": "esp32s3"
+        "string_view": "c"
+    }
 }
