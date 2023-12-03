@@ -12,6 +12,8 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "rom/ets_sys.h"
+
 
 #define nFAULT GPIO_NUM_14
 #define DIR GPIO_NUM_11
@@ -67,15 +69,16 @@ void set_motor_direction(bool direction)
 	gpio_set_level(DIR, direction);
 }
 
+
 void step_motor(bool direction)
 /* this function will call set_motor_direction() to set the motor function to turn one step in the direction of the passed variable. If there is a falult with the motor nothing will happen.
    One step will then be recorded in the steps_turned variable to keep track of how much the motor has turned */
 {
 		set_motor_direction(direction);
 		gpio_set_level(STEP, 1);
-		vTaskDelay(1);
+		ets_delay_us(800);
 		gpio_set_level(STEP, 0);
-		vTaskDelay(1);
+		ets_delay_us(800);
 		steps_turned += 1;
 	
 	

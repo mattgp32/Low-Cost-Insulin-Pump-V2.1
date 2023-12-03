@@ -27,9 +27,9 @@
 #define LEDC_DUTY               (4095) // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
 #define LEDC_FREQUENCY          (2500) // Frequency in Hertz. Set frequency at 5 kHz
 
-#define LED1 GPIO_NUM_35
-#define LED2 GPIO_NUM_3
-#define LED3 GPIO_NUM_9
+#define LED1 GPIO_NUM_1
+#define LED2 GPIO_NUM_2
+#define LED3 GPIO_NUM_42
 
 #define BATT_HIGH 2000
 #define BATT_MED 1900
@@ -151,10 +151,10 @@ void led_double_flash()
    for(int i = 0; i < 5; i++)
    {
       led_on(LED2);
-      led_on(LED3);
+      led_on(LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
       led_off(LED2);
-      led_off(LED3);
+      led_off(LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
    }
 }

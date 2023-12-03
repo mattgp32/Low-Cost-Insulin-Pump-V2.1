@@ -25,6 +25,9 @@ void retreive_data(void* arg);
 void get_current_time(void* arg);
 void give_insulin(void* arg);
 void bolus_delivery(void* arg);
+int set_delivery_frequency_test(int freq);
+void rewind_plunge(void* arg);
+bool check_bolus_cancelled();
 
 #ifdef _cplusplus
 }
