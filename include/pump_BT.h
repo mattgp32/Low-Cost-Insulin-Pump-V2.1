@@ -19,6 +19,8 @@ void run_BT();
 void print_transmission(void* arg);
 void receive_BT_data(void* arg);
 void process_bt_data(void* arg);
+void BT_off(void* arg);
+void BT_Control_Task(void *params);
 
 #ifdef _cplusplus
 }

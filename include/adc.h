@@ -20,6 +20,8 @@ extern "C" {
 
 void get_batt_level(void* arg);
 void print_batt_level(void* arg);
+void read_pot(void* arg);
+
 
 #ifdef _cplusplus
 }
