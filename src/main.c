@@ -29,14 +29,6 @@
 #include "esp_private/esp_clk.h"
 
 #define POT_POWER GPIO_NUM_37
-extern bool enable_BT;
-
-void IRAM_ATTR gpio_isr_handler(void *args)
-    {
-    enable_BT = true;
-    puts("interrupt worked");
-    }
-
 
 void app_main(void)
 {
@@ -54,18 +46,7 @@ void app_main(void)
     init_leds();
     //buzzer_init();
     run_BT();
-    init_motor();
-
-    gpio_set_intr_type(GPIO_NUM_41, GPIO_INTR_POSEDGE);
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(GPIO_NUM_41, gpio_isr_handler, (void *)GPIO_NUM_41);
-
-   
-
-    // gpio_set_direction(GPIO_NUM_42, GPIO_MODE_INPUT);
-    // gpio_pulldown_en(GPIO_NUM_42);
-    // gpio_pullup_dis(GPIO_NUM_42);
-    // gpio_intr_enable(GPIO_NUM_42);
+    // init_motor();
 
     // Create all tasks for the freeRTOS scheduler
     // xTaskCreate(sleep_for_20, "Puts MCU to sleep for 20s", 2048,NULL, 10, NULL);

@@ -830,7 +830,8 @@ void BT_off(void* arg)
     
     }
     disable_BT = false;
-} vTaskDelay(pdMS_TO_TICKS(10000));
+    vTaskDelay(pdMS_TO_TICKS(10000));
+} 
     }
 
 int state = 0;
