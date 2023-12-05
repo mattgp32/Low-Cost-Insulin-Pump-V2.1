@@ -18,8 +18,8 @@ extern "C" {
 #include "freertos/task.h"
 
 void init_leds();
-void led_1_on(int LED);
-void led_1_off(int LED);
+void led_on(int LED);
+void led_off(int LED);
 void display_batt_level(void* arg);
 void led_five_flash();
 void led_double_flash();

@@ -20,6 +20,7 @@
 #include "driver/gptimer.h"
 #include "motor.h"
 #include "driver/gpio.h"
+#include "esp_sleep.h"
 
 #define STEPS_PER_UNIT 775 //(altered based on testing)
 #define SECONDS_TO_MS 1000
@@ -29,6 +30,7 @@
 #define MIN_DELIVERY_STEPS 18
 #define MIN_BOLUS_DELIVERY_SIZE 50
 #define MIN_BOLUS_DELIVERY_STEPS 36
+#define uS_TO_S_FACTOR 1000000ULL
 
 uint8_t index_arr[2] = {0};
 time_t esp_time;
@@ -44,6 +46,8 @@ extern int pot_read_global;
 bool bolus_ready = false;
 bool RW_flag = false;
 extern bool disable_BT;
+extern int BT_timeout;
+
 
 
 // Function to slice a string and find the index of two asterisks contained within it
@@ -59,6 +63,8 @@ bool check_bolus_cancelled() {
 
     if(bolus_size==0){
         cancelled = true;
+        nvs_set_i32(bo_handle, "bolus_size", 0);
+        nvs_commit(bo_handle);
     }
 
     return cancelled;
@@ -313,20 +319,30 @@ void give_insulin(void* arg)
 {
     for(;;)
     {
+        if (BT_timeout < 8)
+        {
         frequency = set_delivery_frequency() * SECONDS_TO_MS;
         // frequency = set_delivery_frequency_test(500) * SECONDS_TO_MS;
-        led_double_flash();
+        //led_double_flash();
 
-        if (frequency <= 0) {
-            //puts("basal rate is 0");
-            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
-        } else {
-        //puts("Entered motor control block\n");
-        turn_x_steps(false, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
-        // turn_x_steps(true, (int)(STEPS_PER_UNIT));
+            if (frequency <= 0) {
+                //puts("basal rate is 0");
+                frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
+            } else {
+            //puts("Entered motor control block\n");
+            turn_x_steps(false, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            // turn_x_steps(true, (int)(STEPS_PER_UNIT));
         }
-    vTaskDelay(pdMS_TO_TICKS(frequency));
+    } else if (BT_timeout >= 8) { 
+    frequency = 100; 
+    puts("goodnight");
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
+    esp_sleep_enable_timer_wakeup(30*uS_TO_S_FACTOR);
+    esp_light_sleep_start();
     //puts("I am working");
+    BT_timeout = 0;
+    }
+    vTaskDelay(pdMS_TO_TICKS(frequency));
     }
 }
 
@@ -391,6 +407,3 @@ void rewind_plunge(void* arg)
     }
     
 }
-
-
-

@@ -1,4 +1,3 @@
-#include "rtc_mgp.h"
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -28,13 +27,17 @@
 #include "driver/gpio.H"
 #include "esp_private/esp_clk.h"
 
+
 #define POT_POWER GPIO_NUM_37
 #define BUTTON_PIN GPIO_NUM_5
 #define ESP_INTR_FLAG_DEFAULT 0
 
+
+
 int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
+int BT_timeout = 0;
 
 void IRAM_ATTR button_isr(void* args)
 {
@@ -94,6 +97,7 @@ void app_main(void)
     esp_pm_config_esp32s3_t pm_config = {
             .max_freq_mhz = 80,
             .min_freq_mhz = 40,
+           .light_sleep_enable = false,
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
     // small delay might be necessary for the frequency setting to take effect — the idle task should have a chance to run
@@ -102,15 +106,16 @@ void app_main(void)
     assert(esp_clk_cpu_freq() == 80 * 1000000);
 
     init_leds();
+    led_five_flash();
     //buzzer_init();
     run_BT();
-    //init_motor();
+    init_motor();
 
     init_button();
     init_isr();
 
     // Create all tasks for the freeRTOS scheduler
-    // xTaskCreate(sleep_for_20, "Puts MCU to sleep for 20s", 2048,NULL, 10, NULL);
+    //xTaskCreate(sleep_for_20, "Puts MCU to sleep for 20s", 2048,NULL, 10, NULL);
     xTaskCreate(get_batt_level, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
     xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
     xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
@@ -124,5 +129,5 @@ void app_main(void)
     xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
     xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
     xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 1, NULL);
-        //install gpio isr service
+    //install gpio isr service
 }
