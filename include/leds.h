@@ -26,6 +26,8 @@ void led_double_flash();
 void buzzer_init(void);
 void annoying_buzzer(void* arg);
 void no_br_warning(void*arg);
+void BT_running_alert(void*args);
+void led_wave();
 
 #ifdef _cplusplus
 }

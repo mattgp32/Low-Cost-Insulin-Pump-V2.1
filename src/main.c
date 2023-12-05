@@ -32,13 +32,9 @@
 #define BUTTON_PIN GPIO_NUM_5
 #define ESP_INTR_FLAG_DEFAULT 0
 
-
-
 int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
-int BT_timeout = 0;
-
 void IRAM_ATTR button_isr(void* args)
 {
     button_pressed += 1;
@@ -106,7 +102,7 @@ void app_main(void)
     assert(esp_clk_cpu_freq() == 80 * 1000000);
 
     init_leds();
-    led_five_flash();
+    led_wave();
     //buzzer_init();
     run_BT();
     init_motor();
@@ -115,7 +111,6 @@ void app_main(void)
     init_isr();
 
     // Create all tasks for the freeRTOS scheduler
-    //xTaskCreate(sleep_for_20, "Puts MCU to sleep for 20s", 2048,NULL, 10, NULL);
     xTaskCreate(get_batt_level, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
     xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
     xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
@@ -129,5 +124,7 @@ void app_main(void)
     xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
     xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
     xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 1, NULL);
+    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 1, NULL);
+    //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }

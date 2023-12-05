@@ -38,6 +38,7 @@
 #define LED_FLASH_TIME 100
 
 extern QueueHandle_t battLevelQueue;
+extern bool BT_already_on;
 
 void buzzer_init(void)
 {
@@ -159,6 +160,23 @@ void led_double_flash()
    }
 }
 
+void led_wave()
+{
+   for (int i = 0; i <4;i++)
+   {
+      led_on(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_on(LED2);
+      led_off(LED1);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_on(LED3);
+      led_off(LED2);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_off(LED3);
+   }
+
+}
+
 void annoying_buzzer(void* arg)
 {
    for(;;)
@@ -183,4 +201,20 @@ void no_br_warning(void*arg)
    }
    vTaskDelay(pdMS_TO_TICKS(10000));
 }
+}
+
+void BT_running_alert(void*args)
+{
+   for(;;)
+   {
+      if (BT_already_on == true)
+      {
+      led_on(1);
+      vTaskDelay(pdMS_TO_TICKS(200));
+      led_off(1);
+      vTaskDelay(pdMS_TO_TICKS(200));
+      } else {
+         vTaskDelay(pdMS_TO_TICKS(2000));
+      }
+   }
 }

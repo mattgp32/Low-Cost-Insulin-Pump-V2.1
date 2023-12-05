@@ -21,6 +21,7 @@
 #include "motor.h"
 #include "driver/gpio.h"
 #include "esp_sleep.h"
+#include "esp_timer.h"
 
 #define STEPS_PER_UNIT 775 //(altered based on testing)
 #define SECONDS_TO_MS 1000
@@ -37,8 +38,13 @@ time_t esp_time;
 time_t actual_time;
 time_t unix_modifier = 0;
 struct tm * timeinfo;
-
+long long int t_current = 0;
+long long int t_prev = 0;
 QueueHandle_t bolus_delivery_queue;
+SemaphoreHandle_t basal_semaphore = NULL;
+extern bool BT_already_on;
+
+esp_sleep_wakeup_cause_t wake_cause;
 
 TickType_t frequency = 1000;
 int basal_info_array[2];
@@ -46,8 +52,6 @@ extern int pot_read_global;
 bool bolus_ready = false;
 bool RW_flag = false;
 extern bool disable_BT;
-extern int BT_timeout;
-
 
 
 // Function to slice a string and find the index of two asterisks contained within it
@@ -295,12 +299,17 @@ void retreive_data(void* arg)
     int basal_rate = 0;
     int bolus_size = 0;
     
+    long long int elapsed_time;
+    
     setenv("TZ", "UTC-12", 1);
     tzset();
     actual_time = time(&esp_time) + unix_modifier;
     timeinfo = localtime(&actual_time);
-    
+    t_prev = t_current;
+    t_current = esp_timer_get_time();
+    elapsed_time = t_current - t_prev;
     printf ("Current local time and date: %s", asctime(timeinfo));
+    printf("Elapsed time is %lld\n", elapsed_time/1000000);
 
     nvs_handle_t br_handle;
     nvs_handle_t bo_handle;
@@ -319,8 +328,8 @@ void give_insulin(void* arg)
 {
     for(;;)
     {
-        if (BT_timeout < 8)
-        {
+        // if(xSemaphoreTake(basal_semaphore, portMAX_DELAY))
+        // {
         frequency = set_delivery_frequency() * SECONDS_TO_MS;
         // frequency = set_delivery_frequency_test(500) * SECONDS_TO_MS;
         //led_double_flash();
@@ -332,17 +341,41 @@ void give_insulin(void* arg)
             //puts("Entered motor control block\n");
             turn_x_steps(false, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
             // turn_x_steps(true, (int)(STEPS_PER_UNIT));
-        }
-    } else if (BT_timeout >= 8) { 
-    frequency = 100; 
-    puts("goodnight");
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
-    esp_sleep_enable_timer_wakeup(30*uS_TO_S_FACTOR);
-    esp_light_sleep_start();
-    //puts("I am working");
-    BT_timeout = 0;
+            }
+    //}
+        vTaskDelay(pdMS_TO_TICKS(frequency));
     }
-    vTaskDelay(pdMS_TO_TICKS(frequency));
+    
+}
+
+void begin_low_power(void* args)
+{
+    for(;;)
+    {
+        if(BT_already_on == false)
+        {
+            //basal_semaphore = xSemaphoreCreateBinary();
+            puts("goodnight");
+            esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
+            esp_sleep_enable_timer_wakeup(10*uS_TO_S_FACTOR);
+            esp_light_sleep_start();
+            //wake_cause = esp_sleep_get_wakeup_cause();
+            led_double_flash();
+            
+            // if (wake_cause == ESP_SLEEP_WAKEUP_EXT0)
+            //     {
+            //         puts("RESTARTING");
+            //         led_five_flash();
+            //         esp_restart();
+
+            //     } else if (wake_cause == ESP_SLEEP_WAKEUP_TIMER)
+            //     {
+            //         xSemaphoreGive(basal_semaphore);
+            //         led_five_flash();
+            //         led_five_flash();
+            //     }
+        }
+    vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
