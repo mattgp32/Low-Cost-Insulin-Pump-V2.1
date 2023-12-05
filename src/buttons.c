@@ -16,9 +16,3 @@
 #include "motor.h"
 #include "driver/gpio.h"
 
-#define INT_BUTTON GPIO_NUM_5
-
-void init_button_interrupts()
-{
-
-}

@@ -29,6 +29,64 @@
 #include "esp_private/esp_clk.h"
 
 #define POT_POWER GPIO_NUM_37
+#define BUTTON_PIN GPIO_NUM_5
+#define ESP_INTR_FLAG_DEFAULT 0
+
+int button_pressed = 0;
+bool BT_already_on = true;
+bool switch_on = false;
+
+void IRAM_ATTR button_isr(void* args)
+{
+    button_pressed += 1;
+}
+
+void init_button()
+{
+    gpio_reset_pin(BUTTON_PIN);
+    gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BUTTON_PIN, GPIO_FLOATING);
+}
+
+void init_isr()
+{
+    gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE);
+    gpio_intr_enable(BUTTON_PIN);
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+    gpio_isr_handler_add(BUTTON_PIN, button_isr, NULL);
+}
+
+void print_num(void*args)
+{
+    for(;;){
+
+        uint8_t butt_read = 0;
+
+        if(button_pressed!= 0)
+        {
+            for (int i = 0; i<10; i++)
+            {
+                if(gpio_get_level(BUTTON_PIN) == true)
+                {
+                    butt_read++;
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                }
+            }
+        }
+
+        if (butt_read > 5)
+        {
+            puts("Button Pressed");
+            switch_on = true;
+            butt_read = 0;
+            button_pressed = 0;
+        } else {
+            butt_read = 0;
+            button_pressed = 0;
+        }
+    vTaskDelay(pdMS_TO_TICKS(200));
+    } 
+}
 
 void app_main(void)
 {
@@ -46,7 +104,10 @@ void app_main(void)
     init_leds();
     //buzzer_init();
     run_BT();
-    // init_motor();
+    //init_motor();
+
+    init_button();
+    init_isr();
 
     // Create all tasks for the freeRTOS scheduler
     // xTaskCreate(sleep_for_20, "Puts MCU to sleep for 20s", 2048,NULL, 10, NULL);
@@ -60,6 +121,8 @@ void app_main(void)
     xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 21, NULL);
     xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
     xTaskCreate(rewind_plunge, "rewind motor if flag set", 4092, NULL, 4, NULL);
-    // xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
-    // xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 1, NULL);
+    xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
+    xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
+    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 1, NULL);
+        //install gpio isr service
 }
