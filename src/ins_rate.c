@@ -211,6 +211,7 @@ int set_delivery_frequency(void)
     }
     else {
         dels_freq = THREE_MINUTES;
+        dels_per_hour = 20;
     }
     basal_info_array[0] = dels_per_hour;
     basal_info_array[1] = basal_rate;
@@ -282,7 +283,7 @@ void read_and_store_data(const char *data)
         printf("Entered prime amount is %d\n", (int)prime_size);
 
         for(int i = 0; i < (int)prime_size; i++){
-            turn_x_steps(false, STEPS_PER_UNIT);
+            turn_x_steps(true, STEPS_PER_UNIT);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
 
@@ -339,7 +340,8 @@ void give_insulin(void* arg)
                 frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
             } else {
             //puts("Entered motor control block\n");
-            turn_x_steps(false, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            printf("Turning %d steps\n", (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            turn_x_steps(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
             // turn_x_steps(true, (int)(STEPS_PER_UNIT));
             }
     //}
@@ -399,7 +401,7 @@ void bolus_delivery(void* arg)
                     printf("Delivering %d doses of 0.05U\n", n_steps);
                     for(int i = 0; i < n_steps; i++){
                         if(!check_bolus_cancelled()){
-                        turn_x_steps(false, MIN_BOLUS_DELIVERY_STEPS);
+                        turn_x_steps(true, MIN_BOLUS_DELIVERY_STEPS);
                         vTaskDelay(pdMS_TO_TICKS(1200));
                         } else {
                             puts("Bolus Cancelled");
@@ -408,7 +410,7 @@ void bolus_delivery(void* arg)
                     }
 
                     if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
-                        turn_x_steps(false, MIN_DELIVERY_STEPS);
+                        turn_x_steps(true, MIN_DELIVERY_STEPS);
                         puts("Delivering 1 dose of 0.025U");
                     }
 
@@ -430,7 +432,7 @@ void rewind_plunge(void* arg)
 {
     for(;;){
         if(RW_flag == true) {
-            turn_x_steps(true, STEPS_PER_UNIT*2);
+            turn_x_steps(false, STEPS_PER_UNIT*2);
         }
 
         if(pot_read_global <=0){

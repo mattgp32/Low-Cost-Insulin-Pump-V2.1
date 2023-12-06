@@ -844,7 +844,7 @@ void BT_off(void* arg)
         BT_already_on = false;
     }
     
-    vTaskDelay(pdMS_TO_TICKS(10000));   
+    vTaskDelay(pdMS_TO_TICKS(1000));   
 } 
     }
 
@@ -858,6 +858,6 @@ void BT_Control_Task(void *arg)
             puts("RESTARTING");
             esp_restart();
         
-        }  vTaskDelay(pdMS_TO_TICKS(3000));
+        }  vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

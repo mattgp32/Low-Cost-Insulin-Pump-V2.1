@@ -117,14 +117,15 @@ void app_main(void)
     xTaskCreate(process_bt_data, "print data from bt buffer",8192, NULL, 10, NULL);
     xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
     xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 5, NULL);
-    xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 20, NULL);
-    xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 21, NULL);
+    xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 21, NULL);
+    xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 20, NULL);
     xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
     xTaskCreate(rewind_plunge, "rewind motor if flag set", 4092, NULL, 4, NULL);
     xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
     xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
-    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 1, NULL);
-    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 1, NULL);
+    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL);
+    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL);
+    xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL);
     //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }

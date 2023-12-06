@@ -36,6 +36,8 @@
 #define BATT_LOW 1800
 
 #define LED_FLASH_TIME 100
+#define LED_FLASH_TIME2 50
+
 
 extern QueueHandle_t battLevelQueue;
 extern bool BT_already_on;
@@ -67,6 +69,7 @@ void buzzer_init(void)
 
 void init_leds()
 {
+   gpio_reset_pin(LED3);
    // initialise all LEDs and set them to be turned off initially
    gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
@@ -100,39 +103,22 @@ void display_batt_level(void* arg)
 
       //printf("Batt level read as %d mV\n", battlevel);
 
-      if (battlevel > BATT_HIGH)
+      if (battlevel < BATT_MED)
       {
-            led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-
-            printf("Batt High\n");
-
-      } else if (battlevel < BATT_HIGH && battlevel > BATT_MED){
-
-         for(int i = 0; i < 2; i++)
+               for(int i = 0; i < 3; i++)
          {
-            led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-
-            printf("Batt Med\n");
-         }
-      } else {
-
-         for(int i = 0; i < 3; i++)
-         {
-            led_on(LED1);
+            led_wave();
             printf("Batt Low\n");
          }
+
+            // printf("Batt High\n");
+
       }
-      vTaskDelay(pdMS_TO_TICKS(9500));
-      printf("Queue read\n");
+      vTaskDelay(pdMS_TO_TICKS(60000));
+      // printf("Queue read\n");
    }
-   vTaskDelay(pdMS_TO_TICKS(9500));
-   printf("Queue not read\n");
+   vTaskDelay(pdMS_TO_TICKS(60000));
+   // printf("Queue not read\n");
    }
 }
 
@@ -209,12 +195,44 @@ void BT_running_alert(void*args)
    {
       if (BT_already_on == true)
       {
-      led_on(1);
-      vTaskDelay(pdMS_TO_TICKS(200));
-      led_off(1);
-      vTaskDelay(pdMS_TO_TICKS(200));
+      led_on(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
+      led_off(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
       } else {
          vTaskDelay(pdMS_TO_TICKS(2000));
       }
+   }
+}
+
+void pump_is_alive(void*args)
+{
+   for(;;)
+   {
+      if(BT_already_on == false){
+        
+            led_on(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_on(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED3);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED3);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         
+
+      } vTaskDelay(pdMS_TO_TICKS(60000));
    }
 }

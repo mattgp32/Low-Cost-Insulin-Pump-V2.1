@@ -28,6 +28,7 @@ void annoying_buzzer(void* arg);
 void no_br_warning(void*arg);
 void BT_running_alert(void*args);
 void led_wave();
+void pump_is_alive(void*args);
 
 #ifdef _cplusplus
 }

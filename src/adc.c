@@ -84,11 +84,11 @@ void read_pot(void* arg)
     int i = 0;
     int potsumtot = 0;
     
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);
-    gpio_pullup_dis(GPIO_NUM_2);
-    gpio_pulldown_dis(GPIO_NUM_2);
-    gpio_set_direction(GPIO_NUM_37, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_37, true);
+    gpio_set_direction(GPIO_NUM_4, GPIO_MODE_INPUT);
+    gpio_pullup_dis(GPIO_NUM_4);
+    gpio_pulldown_dis(GPIO_NUM_4);
+    gpio_set_direction(GPIO_NUM_35, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_35, true);
     vTaskDelay(pdMS_TO_TICKS(1000));
    
 
@@ -108,9 +108,9 @@ void read_pot(void* arg)
     adc_oneshot_chan_cfg_t config = {.bitwidth = ADC_BITWIDTH_DEFAULT,
                                      .atten = ADC_ATTEN_DB_11,};
 
-    adc_oneshot_config_channel(pot_read_adc_handle, ADC_CHANNEL_1, &config);
+    adc_oneshot_config_channel(pot_read_adc_handle, ADC_CHANNEL_3, &config);
 
-    adc_oneshot_read(pot_read_adc_handle, ADC_CHANNEL_1, &adc_raw_value);
+    adc_oneshot_read(pot_read_adc_handle, ADC_CHANNEL_3, &adc_raw_value);
 
     // Close adc instance and free up memory/peripherals
     ESP_ERROR_CHECK(adc_oneshot_del_unit(pot_read_adc_handle));
