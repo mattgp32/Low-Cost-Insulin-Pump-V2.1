@@ -37,6 +37,7 @@
 #include "esp_sleep.h"
 #include "leds.h"
 #include "esp_timer.h"
+#include "esp_pm.h"
 
 #include "sdkconfig.h"
 
@@ -830,8 +831,11 @@ void BT_off(void* arg)
 
     if((BT_already_on == true) && (switch_on == true)) 
     {
+
+     
     
     bt_disable_funcs();
+    vTaskDelay(pdMS_TO_TICKS(200));
     puts("BT Manual Switch Off");
 
     switch_on = false;

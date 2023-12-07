@@ -35,6 +35,8 @@
 int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
+bool low_power_enable = false;
+
 void IRAM_ATTR button_isr(void* args)
 {
     button_pressed += 1;
@@ -87,12 +89,31 @@ void print_num(void*args)
     } 
 }
 
+void low_power(void*args)
+{
+    for(;;)
+    {
+    if ((BT_already_on == false) && (low_power_enable == false)) {
+      esp_pm_config_esp32s3_t pm_config = {
+            .max_freq_mhz = 80,
+            .min_freq_mhz = 80,
+           .light_sleep_enable = true,
+      };
+    low_power_enable = true;
+    esp_pm_configure(&pm_config);
+    puts("Low power enabled");
+    }vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+
+}
+
+
 void app_main(void)
 {
 //Initialise system peripherals to be used after freeRTOS starts
     esp_pm_config_esp32s3_t pm_config = {
             .max_freq_mhz = 80,
-            .min_freq_mhz = 40,
+            .min_freq_mhz = 10,
            .light_sleep_enable = false,
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
@@ -126,6 +147,7 @@ void app_main(void)
     xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL);
     xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL);
     xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL);
+    //xTaskCreate(low_power, "enable low power vonfid after BT is off", 2048, NULL, 10, NULL);
     //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }
