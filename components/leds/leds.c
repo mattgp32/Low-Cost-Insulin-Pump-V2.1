@@ -6,6 +6,10 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define GPIO_LED1    GPIO_NUM_3
+#define GPIO_LED2    GPIO_NUM_46
+#define GPIO_LED3    GPIO_NUM_9
+
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_OUTPUT_IO GPIO_NUM_21
@@ -13,10 +17,6 @@
 #define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define LEDC_DUTY (4095)                // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
 #define LEDC_FREQUENCY (2500)           // Frequency in Hertz. Set frequency at 5 kHz
-
-#define LED1 GPIO_NUM_35
-#define LED2 GPIO_NUM_3
-#define LED3 GPIO_NUM_9
 
 #define BATT_HIGH 2000
 #define BATT_MED 1900
@@ -28,6 +28,18 @@
 /* PRIVATE TYPES                                        */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+typedef enum {
+   LED_OFF,
+   LED_ON,
+   LED_FLASH,
+} LED_modes;
+
+typedef struct {
+   LED_modes led1;
+   LED_modes led2;
+   LED_modes led3;
+} LED_moduleStatus;
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -35,14 +47,22 @@
 void task_LED_handler            ( void * );
 void task_LED_warningNoBasalRate ( void * );
 
-void LED_on    ( int );
-void LED_off   ( int );
+void LED_update ( int, LED_modes );
+
+void LED_on  ( int );
+void LED_off ( int );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 extern QueueHandle_t battLevelQueue;
+
+LED_moduleStatus status = {
+   .led1 = LED_OFF,
+   .led2 = LED_OFF,
+   .led3 = LED_OFF,
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -53,17 +73,17 @@ extern QueueHandle_t battLevelQueue;
  */
 void LED_init ( void )
 {
-   // initialise all LEDs and set them to be turned off initially
-   gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
+   // INITIALISE GPIO
+   gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
+   gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
+   gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
 
-   gpio_set_level(LED1, true);
-   gpio_set_level(LED2, true);
-   gpio_set_level(LED3, true);
+   LED_on(GPIO_LED1);
+   LED_off(GPIO_LED2);
+   LED_off(GPIO_LED3);
 
    // Initialias RTOS Task
-   xTaskCreate(task_LED_handler,             "LED_Handler_Task",              CONFIG_LED_TASK_HEAP*1024,                         NULL, CONFIG_LED_TASK_PRIORITY, NULL);
+   xTaskCreate(task_LED_handler, "LED_Handler_Task", CONFIG_LED_TASK_HEAP*1024, NULL, CONFIG_LED_TASK_PRIORITY, NULL);
    xTaskCreate(task_LED_warningNoBasalRate,  "LED_No_BasalRate_Warning_Task", CONFIG_LED_TASK_HEAP_NO_BASAL_RATE_WARNING*1024,   NULL, CONFIG_LED_TASK_NO_BASAL_RATE_WARNING, NULL);
 }
 
@@ -74,9 +94,9 @@ void LED_fiveFlash ( void )
 {
    for (int i = 0; i < 5; i++)
    {
-      LED_on(LED2);
+      LED_on(GPIO_LED2);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(LED2);
+      LED_off(GPIO_LED2);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
    }
 }
@@ -88,11 +108,11 @@ void LED_doubleFlash ( void )
 {
    for (int i = 0; i < 5; i++)
    {
-      LED_on(LED2);
-      LED_on(LED3);
+      LED_on(GPIO_LED2);
+      LED_on(GPIO_LED3);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(LED2);
-      LED_off(LED3);
+      LED_off(GPIO_LED2);
+      LED_off(GPIO_LED3);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
    }
 }
@@ -130,9 +150,9 @@ void task_LED_handler ( void *arg )
             // Log Battery Level
             printf("Batt High\n");
             // Flash LED 
-            LED_on(LED1);
+            LED_on(GPIO_LED1);
             vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            LED_off(LED1);
+            LED_off(GPIO_LED1);
             vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
          }  
          // Battery Level - MEDIUM
@@ -141,9 +161,9 @@ void task_LED_handler ( void *arg )
             printf("Batt Med\n");
             // Flash LED Twice
             for (int i = 0; i < 2; i++) {
-               LED_on(LED1);
+               LED_on(GPIO_LED1);
                vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-               LED_off(LED1);
+               LED_off(GPIO_LED1);
                vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
             }
          // Battery Level - LOW
@@ -152,7 +172,7 @@ void task_LED_handler ( void *arg )
             printf("Batt Low\n");
             // Flash LED Thrice
             for (int i = 0; i < 3; i++) {
-               LED_on(LED1);
+               LED_on(GPIO_LED1);
             }
          }
          vTaskDelay(pdMS_TO_TICKS(9500));
@@ -194,6 +214,21 @@ void task_LED_warningNoBasalRate ( void *arg )
 
       // Loop Pacing
       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_LED_TASK_INTERVAL_NO_BASAL_RATE_WARNING));
+   }
+}
+
+/*
+ *
+ */
+void LED_update ( int led, LED_modes mode )
+{
+   switch (mode) {
+   case LED_OFF:
+      break;
+   case LED_ON:
+      break;
+   case LED_FLASH:
+      break;
    }
 }
 

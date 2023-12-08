@@ -1,4 +1,4 @@
-menu "Insulin Pump Configuration"
+menu "LED Module Configuration" 
 
     config LED_TASK_INTERVAL
         int "LED Handler Task Loop Interval"

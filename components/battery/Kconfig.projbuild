@@ -1,4 +1,4 @@
-menu "Insulin Pump Configuration"
+menu "Battery Module Configuration"
 
     config BATTERY_TASK_INTERVAL
         int "Battery Handler Task Loop Interval"

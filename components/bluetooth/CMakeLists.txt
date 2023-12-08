@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "pump_BT.c"
-    INCLUDE_DIRS "include"
-    REQUIRES ins_rate bt 
+    SRCS            "pump_BT.c"
+    INCLUDE_DIRS    .
+    REQUIRES        ins_rate bt 
 )

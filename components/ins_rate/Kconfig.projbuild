@@ -1,4 +1,4 @@
-menu "Insulin Pump Configuration"
+menu "Insulin Delivery Module Configuration"
 
     config INS_RATE_RETREIVE_TASK_INTERVAL
         int "Insulin Rate Retreive Data Task Loop Interval"

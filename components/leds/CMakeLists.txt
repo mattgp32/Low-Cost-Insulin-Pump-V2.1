@@ -1,5 +1,5 @@
 idf_component_register(
-    SRC_DIRS "."
-    INCLUDE_DIRS "include"
-    REQUIRES driver battery motor nvs_flash
+    SRCS            "leds.c"
+    INCLUDE_DIRS    .
+    REQUIRES        driver battery motor nvs_flash
 )

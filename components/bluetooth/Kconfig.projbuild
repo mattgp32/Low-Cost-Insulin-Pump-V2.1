@@ -1,4 +1,4 @@
-menu "Insulin Pump Configuration"
+menu "Bluetooth Module Configuration"
 
     config BLUETOOTH_RX_TASK_INTERVAL
         int "Bluetooth Rx Task Loop Interval"
