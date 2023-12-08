@@ -175,6 +175,7 @@ void annoying_buzzer(void* arg)
 void no_br_warning(void*arg)
 {
    for(;;){
+      puts("no br warning begin");
    int basal_rate = 0;
    nvs_handle_t br_handle;
    nvs_flash_init_partition("rate_storage");
@@ -186,6 +187,7 @@ void no_br_warning(void*arg)
       led_double_flash();
    }
    vTaskDelay(pdMS_TO_TICKS(120000));
+   puts("no br warning end");
 }
 }
 
@@ -193,6 +195,7 @@ void BT_running_alert(void*args)
 {
    for(;;)
    {
+      puts("BT_running_alert - begin");
       if (BT_already_on == true)
       {
       led_on(2);
@@ -202,6 +205,7 @@ void BT_running_alert(void*args)
       } else {
          vTaskDelay(pdMS_TO_TICKS(2000));
       }
+      puts("BT_running_alert - end");
    }
 }
 
@@ -209,6 +213,7 @@ void pump_is_alive(void*args)
 {
    for(;;)
    {
+      puts("pump_is_alive - begin");
       if(BT_already_on == false){
         
             led_on(LED1);
@@ -234,5 +239,6 @@ void pump_is_alive(void*args)
          
 
       } vTaskDelay(pdMS_TO_TICKS(60000));
+      puts("pump_is_alive - end");
    }
 }

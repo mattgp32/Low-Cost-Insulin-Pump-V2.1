@@ -695,8 +695,9 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 void bt_disable_funcs(void)
 {
     esp_err_t status;
-    puts("turning off LED2");
+    //puts("turning off LED2");
     led_off(2);
+
 
 	status = esp_bluedroid_disable();
      vTaskDelay(pdMS_TO_TICKS(300));
@@ -720,6 +721,9 @@ void bt_disable_funcs(void)
 		printf("esp_bt_controller_deinit status=%d\n", status);
 		
     } 
+
+    ESP_ERROR_CHECK(esp_bt_mem_release(ESP_BT_MODE_BLE));
+    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
 }
 
 void run_BT()
@@ -804,10 +808,12 @@ void print_transmission(void* arg)
 void receive_BT_data(void* arg)
 {
     for(;;){
+        puts("receive_bt_data begin");
         if (bt_data[15] == 1) {
         xSemaphoreGive(data_ready);
         }
         vTaskDelay(pdMS_TO_TICKS(200));
+        puts("receive_bt_data end");
     }
 }
 
@@ -815,6 +821,7 @@ void process_bt_data(void* arg)
 {
     for(;;)
     {
+        puts("process_bt_data begin");
         if(pdPASS == xSemaphoreTake(data_ready, 0)) {
 
             read_and_store_data(bt_data);
@@ -823,12 +830,14 @@ void process_bt_data(void* arg)
     
 
     vTaskDelay(pdMS_TO_TICKS(200));
+    puts("process_bt_data end");
 }
 }
 
 void BT_off(void* arg)
 {
     for(;;){
+    puts("BT_off begin");
 
     if((BT_already_on == true) && (switch_on == true)) 
     {
@@ -847,7 +856,7 @@ void BT_off(void* arg)
     } else {
     
     vTaskDelay(pdMS_TO_TICKS(1000));   
-    }
+    } puts("BT_off end");
 } 
     }
 
@@ -856,6 +865,7 @@ void BT_Control_Task(void *arg)
 
     for(;;)
     {
+        puts("BT_control_task - begin (end wont show because restart)");
          if((BT_already_on == false) && (switch_on == true))
         {
             puts("RESTARTING");

@@ -330,6 +330,7 @@ void give_insulin(void* arg)
 {
     for(;;)
     {
+        puts("give_insulin begin");
         // if(xSemaphoreTake(basal_semaphore, portMAX_DELAY))
         // {
         frequency = set_delivery_frequency() * SECONDS_TO_MS;
@@ -350,6 +351,7 @@ void give_insulin(void* arg)
     //} 
         
         vTaskDelay(pdMS_TO_TICKS(10000));
+        puts("give_insulin end");
     }
     
 }
@@ -389,6 +391,7 @@ void bolus_delivery(void* arg)
 {
     for(;;)
     {
+        puts("bolus_delivery begin");
         nvs_handle_t bo_handle;
         int bolus_size = 0;
 
@@ -430,12 +433,14 @@ void bolus_delivery(void* arg)
         bolus_ready = false;
        
         vTaskDelay(pdMS_TO_TICKS(1000));
+        puts("bolus_delivery_end");
     } 
 }
 
 void rewind_plunge(void* arg)
 {
     for(;;){
+         puts("rewind_plunge begin");
         if(RW_flag == true) {
             turn_x_steps(false, STEPS_PER_UNIT*2);
             read_pot();
@@ -445,6 +450,7 @@ void rewind_plunge(void* arg)
             RW_flag = false;
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
+        puts("rewind_plunge end");
     }
     
 }

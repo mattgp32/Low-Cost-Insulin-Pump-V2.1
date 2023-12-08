@@ -30,6 +30,7 @@
 #include "esp_timer.h"
 
 
+
 #define POT_POWER GPIO_NUM_37
 #define BUTTON_PIN GPIO_NUM_5
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -68,6 +69,8 @@ void print_num(void*args)
 {
     for(;;){
 
+        puts("Print_num begin");
+
         uint8_t butt_read = 0;
 
         if(button_pressed!= 0)
@@ -93,6 +96,7 @@ void print_num(void*args)
             button_pressed = 0;
         }
     vTaskDelay(pdMS_TO_TICKS(200));
+     puts("Print_num end");
     } 
 }
 
