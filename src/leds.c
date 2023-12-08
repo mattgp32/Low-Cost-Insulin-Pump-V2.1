@@ -185,7 +185,7 @@ void no_br_warning(void*arg)
    {
       led_double_flash();
    }
-   vTaskDelay(pdMS_TO_TICKS(10000));
+   vTaskDelay(pdMS_TO_TICKS(120000));
 }
 }
 

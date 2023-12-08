@@ -22,8 +22,9 @@
 #include "driver/gpio.h"
 #include "esp_sleep.h"
 #include "esp_timer.h"
+#include "adc.h"
 
-#define STEPS_PER_UNIT 775 //(altered based on testing)
+#define STEPS_PER_UNIT 740//(altered based on testing)
 #define SECONDS_TO_MS 1000
 #define THREE_MINUTES 180
 #define SECONDS_IN_AN_HOUR 3600
@@ -340,12 +341,15 @@ void give_insulin(void* arg)
                 frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
             } else {
             //puts("Entered motor control block\n");
-            printf("Turning %d steps\n", (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+           // printf("Turning %d steps\n", (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
             turn_x_steps(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            read_pot();
             // turn_x_steps(true, (int)(STEPS_PER_UNIT));
             }
-    //}
-        vTaskDelay(pdMS_TO_TICKS(frequency));
+             
+    //} 
+        
+        vTaskDelay(pdMS_TO_TICKS(10000));
     }
     
 }
@@ -416,6 +420,7 @@ void bolus_delivery(void* arg)
 
                     
                     puts("Bolus delivery complete");
+                     read_pot();
                     //disable_BT = true;
             
             }
@@ -433,12 +438,13 @@ void rewind_plunge(void* arg)
     for(;;){
         if(RW_flag == true) {
             turn_x_steps(false, STEPS_PER_UNIT*2);
+            read_pot();
         }
-
+        //
         if(pot_read_global <=0){
             RW_flag = false;
         }
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
     
 }

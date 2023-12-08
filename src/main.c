@@ -26,16 +26,23 @@
 #include "esp_pm.h"
 #include "driver/gpio.H"
 #include "esp_private/esp_clk.h"
+#include "esp_sleep.h"
+#include "esp_timer.h"
 
 
 #define POT_POWER GPIO_NUM_37
 #define BUTTON_PIN GPIO_NUM_5
 #define ESP_INTR_FLAG_DEFAULT 0
+#define uS_TO_S_FACTOR 1000000ULL
+#define uS_TO_TICKHZ_FACTOR 10000
+
 
 int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
 bool low_power_enable = false;
+long long int timeb4slp = 0;
+
 
 void IRAM_ATTR button_isr(void* args)
 {
@@ -77,7 +84,7 @@ void print_num(void*args)
 
         if (butt_read > 5)
         {
-            puts("Button Pressed");
+            //puts("Button Pressed");
             switch_on = true;
             butt_read = 0;
             button_pressed = 0;
@@ -89,65 +96,64 @@ void print_num(void*args)
     } 
 }
 
-void low_power(void*args)
+void take_a_nap(void * args)
 {
     for(;;)
     {
-    if ((BT_already_on == false) && (low_power_enable == false)) {
-      esp_pm_config_esp32s3_t pm_config = {
-            .max_freq_mhz = 80,
-            .min_freq_mhz = 80,
-           .light_sleep_enable = true,
-      };
-    low_power_enable = true;
-    esp_pm_configure(&pm_config);
-    puts("Low power enabled");
-    }vTaskDelay(pdMS_TO_TICKS(5000));
-    }
-
+    if(BT_already_on == false)
+        {
+        timeb4slp = esp_timer_get_time();
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
+        esp_sleep_enable_timer_wakeup(5*uS_TO_S_FACTOR);
+        puts("goodnight");
+        vTaskDelay(500);
+        esp_light_sleep_start();
+        vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
+        led_double_flash();
+        } vTaskDelay(200);
+    } 
 }
-
 
 void app_main(void)
 {
 //Initialise system peripherals to be used after freeRTOS starts
     esp_pm_config_esp32s3_t pm_config = {
             .max_freq_mhz = 80,
-            .min_freq_mhz = 10,
+            .min_freq_mhz = 40,
            .light_sleep_enable = false,
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
     // small delay might be necessary for the frequency setting to take effect — the idle task should have a chance to run
     vTaskDelay(pdMS_TO_TICKS(10));
     // now the frequency should be 40 MHz
-    assert(esp_clk_cpu_freq() == 80 * 1000000);
+    //assert(esp_clk_cpu_freq() == 80 * 1000000);
 
     init_leds();
     led_wave();
     //buzzer_init();
     run_BT();
     init_motor();
-
+    adc_init();
     init_button();
     init_isr();
 
     // Create all tasks for the freeRTOS scheduler
-    xTaskCreate(get_batt_level, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
-    xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
+    //xTaskCreate(get_batt_level, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
+    //xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
     xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
     xTaskCreate(process_bt_data, "print data from bt buffer",8192, NULL, 10, NULL);
-    xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
+    //xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
     xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 5, NULL);
     xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 21, NULL);
     xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 20, NULL);
-    xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
+    //xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
     xTaskCreate(rewind_plunge, "rewind motor if flag set", 4092, NULL, 4, NULL);
     xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
     xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
-    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL);
-    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL);
-    xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL);
-    //xTaskCreate(low_power, "enable low power vonfid after BT is off", 2048, NULL, 10, NULL);
+    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL); //
+    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL); //
+    xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL); //
+    //xTaskCreate(take_a_nap, "enable low power config after BT is off", 2048, NULL, 1, NULL);
     //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }

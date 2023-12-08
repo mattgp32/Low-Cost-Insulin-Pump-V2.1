@@ -697,6 +697,7 @@ void bt_disable_funcs(void)
     esp_err_t status;
     puts("turning off LED2");
     led_off(2);
+
 	status = esp_bluedroid_disable();
      vTaskDelay(pdMS_TO_TICKS(300));
 	if (status != ESP_OK) {
@@ -735,7 +736,7 @@ void run_BT()
     }
     ESP_ERROR_CHECK( ret );
 
-   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+   //ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
@@ -831,12 +832,9 @@ void BT_off(void* arg)
 
     if((BT_already_on == true) && (switch_on == true)) 
     {
-
-     
-    
     bt_disable_funcs();
     vTaskDelay(pdMS_TO_TICKS(200));
-    puts("BT Manual Switch Off");
+    //puts("BT Manual Switch Off");
 
     switch_on = false;
     BT_already_on = false;
@@ -844,11 +842,12 @@ void BT_off(void* arg)
     } else if ((BT_already_on == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
     {
         bt_disable_funcs();
-        puts("BT Timeout Switch Off");
+        //puts("BT Timeout Switch Off");
         BT_already_on = false;
-    }
+    } else {
     
     vTaskDelay(pdMS_TO_TICKS(1000));   
+    }
 } 
     }
 
