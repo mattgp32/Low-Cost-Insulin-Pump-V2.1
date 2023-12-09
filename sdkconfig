@@ -472,6 +472,10 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 
 #
+# Button Module Configuration
+#
+
+#
 # Buzzer Module Configuration
 #
 
