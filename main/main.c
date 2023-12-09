@@ -26,7 +26,7 @@
 #include "esp_private/esp_clk.h"
 #include "esp_sleep.h"
 #include "esp_timer.h"
-#include "ble_comp_test.h"
+// #include "ble_comp_test.h"
 
 #include "adc.h"
 #include "motor.h"

@@ -6,15 +6,15 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define LED1 GPIO_NUM_1
-#define LED2 GPIO_NUM_2
-#define LED3 GPIO_NUM_42
+#define GPIO_LED1       GPIO_NUM_1
+#define GPIO_LED2       GPIO_NUM_2
+#define GPIO_LED3       GPIO_NUM_42
 
-#define BATT_HIGH 2000
-#define BATT_MED 1900
-#define BATT_LOW 1800
+#define BATT_HIGH       2000
+#define BATT_MED        1900
+#define BATT_LOW        1800
 
-#define LED_FLASH_TIME 100
+#define LED_FLASH_TIME  100
 #define LED_FLASH_TIME2 50
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -41,14 +41,14 @@ extern bool BT_already_on;
  */
 void LED_init ( void )
 {
-   gpio_reset_pin(LED3);
+   gpio_reset_pin(GPIO_LED3);
    // initialise all LEDs and set them to be turned off initially
-   gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
-   gpio_set_level(LED1, false);
-   gpio_set_level(LED2, true);
-   gpio_set_level(LED3, true);
+   gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
+   gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
+   gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
+   gpio_set_level(GPIO_LED1, false);
+   gpio_set_level(GPIO_LED2, true);
+   gpio_set_level(GPIO_LED3, true);
 }
 
 /*
@@ -62,7 +62,7 @@ void LED_on ( int LED )
 /*
  * Description
  */
-void LED_off( int LED )
+void LED_off ( int LED )
 {
    gpio_set_level(LED, true);
 }
@@ -88,11 +88,11 @@ void LED_flashDouble ( void )
 {
    for(int i = 0; i < 5; i++)
    {
-      LED_on(LED2);
-      LED_on(LED1);
+      LED_on(GPIO_LED2);
+      LED_on(GPIO_LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(LED2);
-      LED_off(LED1);
+      LED_off(GPIO_LED2);
+      LED_off(GPIO_LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
    }
 }
@@ -104,15 +104,15 @@ void LED_wave ( void )
 {
    for (int i = 0; i <4;i++)
    {
-      LED_on(LED1);
+      LED_on(GPIO_LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_on(LED2);
-      LED_off(LED1);
+      LED_on(GPIO_LED2);
+      LED_off(GPIO_LED1);
        vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_on(LED3);
-      LED_off(LED2);
+      LED_on(GPIO_LED3);
+      LED_off(GPIO_LED2);
        vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(LED3);
+      LED_off(GPIO_LED3);
    }
 
 }
@@ -140,14 +140,12 @@ void task_LED_displayBattLevel ( void *arg )
 
          if (battlevel < BATT_MED)
          {
-                  for(int i = 0; i < 3; i++)
+            for(int i = 0; i < 3; i++)
             {
                LED_wave();
                printf("Batt Low\n");
             }
-
-               // printf("Batt High\n");
-
+             // printf("Batt High\n");
          }
          vTaskDelay(pdMS_TO_TICKS(60000));
          // printf("Queue read\n");
@@ -190,10 +188,10 @@ void task_LED_bluetoothRunningAlert ( void *args )
       puts("BT_running_alert - begin");
       if (BT_already_on == true)
       {
-      LED_on(2);
-      vTaskDelay(pdMS_TO_TICKS(500));
-      LED_off(2);
-      vTaskDelay(pdMS_TO_TICKS(500));
+         LED_on(2);
+         vTaskDelay(pdMS_TO_TICKS(500));
+         LED_off(2);
+         vTaskDelay(pdMS_TO_TICKS(500));
       } else {
          vTaskDelay(pdMS_TO_TICKS(2000));
       }
@@ -211,25 +209,25 @@ void task_LED_pumpIsAlive ( void *args )
       puts("pump_is_alive - begin");
       if(BT_already_on == false)
       { 
-         LED_on(LED1);
+         LED_on(GPIO_LED1);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_off(LED1);
+         LED_off(GPIO_LED1);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_on(LED2);
+         LED_on(GPIO_LED2);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_off(LED2);
+         LED_off(GPIO_LED2);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_on(LED3);
+         LED_on(GPIO_LED3);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_off(LED3);
+         LED_off(GPIO_LED3);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_on(LED2);
+         LED_on(GPIO_LED2);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_off(LED2);
+         LED_off(GPIO_LED2);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_on(LED1);
+         LED_on(GPIO_LED1);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         LED_off(LED1);
+         LED_off(GPIO_LED1);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
       } 
       vTaskDelay(pdMS_TO_TICKS(60000));

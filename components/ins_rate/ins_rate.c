@@ -6,15 +6,16 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define STEPS_PER_UNIT 740//(altered based on testing)
-#define SECONDS_TO_MS 1000
-#define THREE_MINUTES 180
-#define SECONDS_IN_AN_HOUR 3600
-#define MIN_DELIVERY_SIZE 25
-#define MIN_DELIVERY_STEPS 18
-#define MIN_BOLUS_DELIVERY_SIZE 50
-#define MIN_BOLUS_DELIVERY_STEPS 36
-#define uS_TO_S_FACTOR 1000000ULL
+#define STEPS_PER_UNIT              740         // Altered based on testing
+#define MIN_DELIVERY_SIZE           25
+#define MIN_DELIVERY_STEPS          18
+#define MIN_BOLUS_DELIVERY_SIZE     50
+#define MIN_BOLUS_DELIVERY_STEPS    36
+
+#define SECONDS_TO_MS               1000
+#define THREE_MINUTES               180
+#define SECONDS_IN_AN_HOUR          3600
+#define uS_TO_S_FACTOR              1000000ULL
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -24,9 +25,9 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void    INS_RATE_writeData_bolus        ( int delivery_amount );
-void    INS_RATE_writeData_rewind       ( int delivery_amount );
-int     INS_RATE_setDeliveryFrequency   ( void );
+void INS_RATE_writeData_bolus       ( int );
+void INS_RATE_writeData_rewind      ( int );
+int  INS_RATE_setDeliveryFrequency  ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
@@ -244,12 +245,13 @@ bool INSRATE_checkBolusCancelled ( void )
     int32_t bolus_size = 0;
     nvs_handle_t bo_handle;
     bool cancelled = false;
+
     nvs_flash_init_partition("rate_storage");
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);   
     nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
 
-
-    if(bolus_size==0){
+    if ( bolus_size==0 )
+    {
         cancelled = true;
         nvs_set_i32(bo_handle, "bolus_size", 0);
         nvs_commit(bo_handle);
@@ -337,7 +339,7 @@ void task_INSRATE_beginLowPower ( void *args )
 {
     while(1)
     {
-        if(BT_already_on == false)
+        if ( BT_already_on == false )
         {
             //basal_semaphore = xSemaphoreCreateBinary();
             puts("goodnight");
@@ -514,127 +516,11 @@ void INSRATE_writeData_Bolus ( int delivery_amount )
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        LED_doubleFlash();
+        LED_flashDouble();
     }
      nvs_set_i32(bo_handle, "bolus_size", delivery_amount);
      nvs_commit(bo_handle);
 }
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* RTOS FUNCTIONS                                       */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-/*
- * Just used for checking if nvs and BT was working, not used in final version
- * Display rate data - for debugging only
- */
-void task_INSRATE_retreiveData ( void *arg )
-{
-    // Create Function Variables
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    // Loop To Infinity And Beyond
-    while(1)
-    {
-        int32_t basal_rate = 0;
-        int32_t bolus_size = 0;
-        
-        setenv("TZ", "UTC-12", 1);
-        tzset();
-        actual_time = time(&esp_time) + unix_modifier;
-        timeinfo = localtime(&actual_time);
-        
-        printf ("Current local time and date: %s", asctime(timeinfo));
-
-        nvs_handle_t br_handle;
-        nvs_handle_t bo_handle;
-        nvs_flash_init_partition("rate_storage");
-        nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
-        nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
-        nvs_get_i32(br_handle, "basal_rate", &basal_rate);
-        nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-        printf("Current basal rate is %ld\n", basal_rate);
-        printf("Current bolus amount is %ld\n", bolus_size);
-
-        // Loop Pacing
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_INS_RATE_RETREIVE_TASK_INTERVAL));
-    }
-}
-
-/*
- * start insulin deliveries
- */
-void task_INSRATE_giveInsulin ( void* arg )
-{
-    // Loop To Infinity And Beyond
-    while(1)
-    {
-        frequency = INSRATE_setDeliveryFrequencyTest() * SECONDS_TO_MS;
-
-        if (frequency <= 0) {
-            puts("basal rate is 0");
-            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
-        } else {
-        puts("Entered motor control block\n");
-        MOTOR_stepX(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
-        }
-        vTaskDelay(pdMS_TO_TICKS(frequency));
-    }
-}
-
-/*
- * give bolus
- */
-void task_INSRATE_deliverBolus ( void* arg )
-{
-    // Create Function Variables
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    // Loop To Infinity And Beyond
-    while(1)
-    {
-        nvs_handle_t bo_handle;
-        int32_t bolus_size = 0;
-
-        if(bolus_ready == true)
-        {
-            nvs_flash_init_partition("rate_storage");
-            nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);   
-            nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-
-            if((bolus_size/MIN_DELIVERY_SIZE) == 0){
-                puts("ReQueSteD bOLuS iS ToO SMalL!!!");
-                LED_doubleFlash();
-            } else {
-                int n_MOTOR_PIN_STEPs = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
-                printf("Delivering %d doses of 0.05U\n", n_MOTOR_PIN_STEPs);
-                for(int i = 0; i < n_MOTOR_PIN_STEPs; i++){
-                    MOTOR_stepX(true, MIN_BOLUS_DELIVERY_STEPS);
-                    vTaskDelay(pdMS_TO_TICKS(1200));
-                }
-
-                if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
-                    MOTOR_stepX(true, MIN_DELIVERY_STEPS);
-                    puts("Delivering 1 dose of 0.025U");
-                }
-
-                puts("Bolus delivery complete");
-
-            }
-
-        }
-        nvs_set_i32(bo_handle, "bolus_size", 0);
-        nvs_commit(bo_handle);
-        bolus_ready = false;
-        
-        // Loop Pacing
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_INS_RATE_DELIVER_BOLUS_TASK_INTERVAL));
-    } 
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

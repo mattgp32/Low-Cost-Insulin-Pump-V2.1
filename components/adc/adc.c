@@ -99,12 +99,12 @@ void task_ADC_getBattLevel ( void* arg )
         
         adc_oneshot_unit_init_cfg_t batt_read_adc_config = { 
             .unit_id = ADC_UNIT_1,
-            .ulp_mode = ADC_ULP_MODE_DISABLE,};
+            .ulp_mode = ADC_ULP_MODE_DISABLE, };
         adc_oneshot_new_unit(&batt_read_adc_config, &batt_read_adc_handle);
 
         adc_oneshot_chan_cfg_t config = {
             .bitwidth = ADC_BITWIDTH_DEFAULT,
-            .atten = ADC_ATTEN_DB_11,};
+            .atten = ADC_ATTEN_DB_11, };
         adc_oneshot_config_channel(batt_read_adc_handle, ADC_CHANNEL_7, &config);
 
         adc_oneshot_read(batt_read_adc_handle, ADC_CHANNEL_7, &adc_raw_value);

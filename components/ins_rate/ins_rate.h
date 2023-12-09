@@ -8,31 +8,31 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #include "stdint.h"
-#include <stdbool.h>
+#include "stdbool.h"
 #include "stdio.h"
-#include "driver/gpio.h"
+#include "string.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "stdint.h"
-#include "string.h"
-#include "stdio.h"
-#include "nvs_flash.h"
-#include "esp_system.h"
-#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h" 
 #include "freertos/semphr.h"
-#include "leds.h"
+
+#include "esp_system.h"
+#include "esp_log.h"
+#include "esp_sleep.h"
+#include "esp_timer.h"
+#include "nvs_flash.h"
 #include "time.h"
 #include "sys/time.h"
 #include "driver/gptimer.h"
-#include "motor.h"
 #include "driver/gpio.h"
-#include "esp_sleep.h"
-#include "esp_timer.h"
+
+#include "motor.h"
 #include "adc.h"
+#include "leds.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */

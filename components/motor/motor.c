@@ -1,27 +1,21 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#include "stdint.h"
-#include <stdbool.h>
-#include "stdio.h"
-#include "driver/gpio.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "rom/ets_sys.h"
+#include "motor.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define nFAULT GPIO_NUM_14
-#define DIR GPIO_NUM_11
-#define STEP GPIO_NUM_12
-#define BOOST_EN GPIO_NUM_45
-#define MOTOR_DRIVER_ENABLE GPIO_NUM_13
-#define nSLEEP GPIO_NUM_10
+#define nFAULT 				GPIO_NUM_14
+#define DIR 				GPIO_NUM_11
+#define STEP 				GPIO_NUM_12
+#define BOOST_EN 			GPIO_NUM_45
+#define MOTOR_DRIVER_ENABLE	GPIO_NUM_13
+#define nSLEEP 				GPIO_NUM_10
 
-#define FORWARD 0
-#define BACKWARD 1
-#define DELAY_TIME 500
+#define FORWARD 			0
+#define BACKWARD 			1
+#define DELAY_TIME 			500
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -56,6 +50,17 @@ void MOTOR_init ( void )
 }
 
 /*
+ * Description
+ */
+void MOTOR_enable ( void )
+{
+	gpio_set_level(BOOST_EN, true);
+    gpio_set_level(MOTOR_DRIVER_ENABLE, false);
+	gpio_set_level(nSLEEP, true);
+	vTaskDelay(200/portTICK_PERIOD_MS);
+}
+
+/*
  * Enable Motor Driver Functionality
  */
 void MOTOR_disable ( void )
@@ -78,17 +83,9 @@ bool MOTOR_readFaultPin ( void )
 /*
  * Call this function to change the value of the DIR pin on the IC which controls the direction the motor turns.
  */
-bool MOTOR_readFaultPin ( void )
-{
-	gpio_set_level(DIR, direction);
-}
-
-/*
- * Description
- */
 void MOTOR_setDir ( bool direction )
 {
-	gpio_set_level(MOTOR_PIN_DIR, direction);
+	gpio_set_level(DIR, direction);
 }
 
 /*
@@ -97,7 +94,7 @@ void MOTOR_setDir ( bool direction )
  */
 void MOTOR_step ( bool dir )
 {
-	MOTOR_setDir(direction);
+	MOTOR_setDir(dir);
 	gpio_set_level(STEP, 1);
 	vTaskDelay(1);
 	gpio_set_level(STEP, 0);

@@ -11,6 +11,7 @@
 #include "freertos/task.h"
 
 #include "driver/gpio.h"
+#include "rom/ets_sys.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
