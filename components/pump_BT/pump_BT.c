@@ -1,9 +1,4 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* This demo showcases BLE GATT server. It can send adv data, be connected by client.
-* Run the gatt_client demo, the client demo will automatically connect to the gatt_server demo.
-* Client demo will enable gatt_server's notify after connection. The two devices will then exchange
-* data. */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #include "pump_BT.h"
 

@@ -472,6 +472,10 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 
 #
+# Buzzer Module Configuration
+#
+
+#
 # Insulin Rate Module Configuration
 #
 
