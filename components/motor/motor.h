@@ -26,13 +26,13 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void init_motor();
-void enable_motor();
-void disable_motor();
-bool read_motor_fault_pin();
-void set_motor_direction(bool direction);
-void step_motor(bool direction);
-void turn_x_steps(bool direction, uint16_t steps_to_turn);
+void MOTOR_init ( void );
+void MOTOR_enable ( void );
+void MOTOR_disable ( void );
+bool MOTOR_readFaultPin ( void );
+void MOTOR_setDir ( bool );
+void MOTOR_step ( bool );
+void MOTOR_stepX ( bool, uint16_t );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

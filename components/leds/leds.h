@@ -40,18 +40,21 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void init_leds( void );
-void led_on(int LED);
-void led_off(int LED);
-void display_batt_level(void* arg);
-void led_five_flash();
-void led_double_flash();
-void buzzer_init(void);
-void annoying_buzzer(void* arg);
-void no_br_warning(void*arg);
-void BT_running_alert(void*args);
-void led_wave();
-void pump_is_alive(void*args);
+void LED_init           ( void );
+void LED_on             ( int );
+void LED_off            ( int );
+void LED_flashFive      ( void );
+void LED_flashDouble    ( void );
+void LED_wave           ( void );
+
+void task_LED_displayBattLevel      ( void * );
+void task_LED_noBasilWarning        ( void * );
+void task_LED_bluetoothRunningAlert ( void * );
+void task_LED_pumpIsAlive           ( void * );
+
+// Buzzer Functions
+void BUZZER_init            ( void );
+void task_BUZZER_annoying   ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

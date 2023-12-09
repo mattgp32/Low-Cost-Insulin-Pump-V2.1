@@ -90,33 +90,33 @@ void app_main(void)
     // now the frequency should be 40 MHz
     //assert(esp_clk_cpu_freq() == 80 * 1000000);
 
-    init_leds();
-    led_wave();
-    //buzzer_init();
-    run_BT();
-    init_motor();
-    adc_init();
+    LED_init();
+    LED_wave();
+    //BUZZER_init();
+    BT_run();
+    MOTOR_init();
+    ADC_init();
     init_button();
     init_isr();
 
     // Create all tasks for the freeRTOS scheduler
-    //xTaskCreate(get_batt_level, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
-    //xTaskCreate(display_batt_level, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
-    xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
-    xTaskCreate(process_bt_data, "print data from bt buffer",8192, NULL, 10, NULL);
-    //xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
-    xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 5, NULL);
-    xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 21, NULL);
-    xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 20, NULL);
-    //xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
-    xTaskCreate(rewind_plunge, "rewind motor if flag set", 4092, NULL, 4, NULL);
+    //xTaskCreate(task_ADC_getBattLevel, "Read ADC and write batt level to a queue", 1024, NULL, 5, NULL);
+    //xTaskCreate(task_LED_displayBattLevel, "Blink LED depending on batt level", 8192, NULL, 5, NULL);
+    xTaskCreate(task_BT_receiveData, "get data from bt buffer",8192, NULL, 10, NULL);
+    xTaskCreate(task_BT_processData, "print data from bt buffer",8192, NULL, 10, NULL);
+    //xTaskCreate(task_INSRATE_retreiveData, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
+    xTaskCreate(task_LED_noBasilWarning, "flash led if br = 0", 2048, NULL, 5, NULL);
+    xTaskCreate(task_INSRATE_giveInsulin, "start insulin deliveries", 4096, NULL, 21, NULL);
+    xTaskCreate(task_INSRATE_deliverBolus, "give bolus", 4092, NULL, 20, NULL);
+    //xTaskCreate(ADC_readpot, "potentimoeter read", 4092, NULL, 5, NULL);
+    xTaskCreate(task_INSRATE_rewindPlunger, "rewind motor if flag set", 4092, NULL, 4, NULL);
     xTaskCreate(print_num,"print num", 4092, NULL, 4, NULL);
-    xTaskCreate(BT_off, "turn off BT", 4092, NULL, 4, NULL);
-    xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL); //
-    xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL); //
-    xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL); //
+    xTaskCreate(task_BT_off, "turn off BT", 4092, NULL, 4, NULL);
+    xTaskCreate(task_BT_handler, "BT_Control_Task", 2048, NULL, 10, NULL); //
+    xTaskCreate(task_LED_bluetoothRunningAlert, "flash_led_when BT active", 2048, NULL, 15, NULL); //
+    xTaskCreate(task_LED_pumpIsAlive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL); //
     //xTaskCreate(take_a_nap, "enable low power config after BT is off", 2048, NULL, 1, NULL);
-    //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
+    //xTaskCreate(task_INSRATE_beginLowPower, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }
 
@@ -199,7 +199,7 @@ void take_a_nap ( void *args )
         vTaskDelay(500);
         esp_light_sleep_start();
         vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
-        // led_double_flash();
+        // LED_flashDouble();
         } vTaskDelay(200);
     } 
 }

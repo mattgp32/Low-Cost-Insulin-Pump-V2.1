@@ -31,10 +31,11 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void get_batt_level(void* arg);
-void print_batt_level(void* arg);
-void read_pot(void);
-void adc_init(void);
+void ADC_init       ( void );
+void ADC_readpot    ( void );
+
+void task_ADC_getBattLevel      ( void* arg );
+void task_ADC_printBattLevel    ( void* arg );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

@@ -45,12 +45,13 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void run_BT();
-void print_transmission(void* arg);
-void receive_BT_data(void* arg);
-void process_bt_data(void* arg);
-void BT_off(void* arg);
-void BT_Control_Task(void *params);
+void BT_run ( void );
+
+void task_BT_off ( void * );
+void task_BT_printTransmission ( void * );
+void task_BT_receiveData ( void * );
+void task_BT_processData ( void * );
+void task_BT_handler ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

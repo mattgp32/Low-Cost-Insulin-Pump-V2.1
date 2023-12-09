@@ -185,6 +185,9 @@ static prepare_type_env_t b_prepare_write_env;
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+/*
+ * Description
+ */
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event) {
@@ -242,6 +245,9 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     }
 }
 
+/*
+ * Description
+ */
 void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
     esp_gatt_status_t status = ESP_GATT_OK;
     if (param->write.need_rsp){
@@ -286,6 +292,9 @@ void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare
     }
 }
 
+/*
+ * Description
+ */
 void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param){
     if (param->exec_write.exec_write_flag == ESP_GATT_PREP_WRITE_EXEC){
         esp_log_buffer_hex(GATTS_TAG, prepare_write_env->prepare_buf, prepare_write_env->prepare_len);
@@ -299,6 +308,9 @@ void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble
     prepare_write_env->prepare_len = 0;
 }
 
+/*
+ * Description
+ */
 static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
     switch (event) {
     case ESP_GATTS_REG_EVT:
@@ -648,6 +660,9 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     }
 }
 
+/*
+ * Description
+ */
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
     /* If event is register event, store the gatts_if for each profile */
@@ -677,11 +692,14 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     } while (0);
 }
 
+/*
+ * Description
+ */
 void bt_disable_funcs(void)
 {
     esp_err_t status;
     //puts("turning off LED2");
-    //led_off(2);
+    //LED_off(2);
 
 
 	status = esp_bluedroid_disable();
@@ -708,7 +726,10 @@ void bt_disable_funcs(void)
     } 
 }
 
-void run_BT()
+/*
+ * Description
+ */
+void BT_run ( void )
 {
     // Create a semaphore to enable system to respond when data is ready:
     data_ready = xSemaphoreCreateBinary();
@@ -774,86 +795,107 @@ void run_BT()
     }
 }
 
-void print_transmission(void* arg)
-{
-    for(;;){
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+/*
+ * Description
+ */
+void task_BT_off ( void *arg )
+{
+    while(1)
+    {
+        puts("BT_off begin");
+        if((BT_already_on == true) && (switch_on == true)) 
+        {
+            bt_disable_funcs();
+            vTaskDelay(pdMS_TO_TICKS(200));
+            //puts("BT Manual Switch Off");
+
+            switch_on = false;
+            BT_already_on = false;
+        
+        } 
+        else if ((BT_already_on == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
+        {
+            bt_disable_funcs();
+            //puts("BT Timeout Switch Off");
+            BT_already_on = false;
+        } 
+        else 
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));   
+        }  
+        puts("BT_off end");
+    }    
+}
+
+/*
+ * Description
+ */
+void task_BT_printTransmission ( void *arg )
+{
+    while(1)
+    {
         for(int i = 0; (i < 15); i++)
         {
             printf("%d ", bt_data[i]);
         }
         printf("\n");
         vTaskDelay(pdMS_TO_TICKS(5000));
-}
     }
+}
 
-void receive_BT_data(void* arg)
+/*
+ * Description
+ */
+void task_BT_receiveData ( void *arg )
 {
-    for(;;){
+    while(1)
+    {
         puts("receive_bt_data begin");
-        if (bt_data[15] == 1) {
-        xSemaphoreGive(data_ready);
+        if (bt_data[15] == 1) 
+        {
+            xSemaphoreGive(data_ready);
         }
         vTaskDelay(pdMS_TO_TICKS(200));
         puts("receive_bt_data end");
     }
 }
 
-void process_bt_data(void* arg)
+/*
+ * Description
+ */
+void task_BT_processData ( void *arg )
 {
-    for(;;)
+    while(1)
     {
         puts("process_bt_data begin");
-        if(pdPASS == xSemaphoreTake(data_ready, 0)) {
-
-            read_and_store_data(bt_data);
+        if(pdPASS == xSemaphoreTake(data_ready, 0)) 
+        {
+            INSRATE_readAndStoreData(bt_data);
             memset(bt_data, 0, sizeof(bt_data));
-    }
-    
-
-    vTaskDelay(pdMS_TO_TICKS(200));
-    puts("process_bt_data end");
-}
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+        puts("process_bt_data end");
+    }   
 }
 
-void BT_off(void* arg)
+/*
+ * Description
+ */
+void task_BT_handler ( void *arg )
 {
-    for(;;){
-    puts("BT_off begin");
-
-    if((BT_already_on == true) && (switch_on == true)) 
-    {
-    bt_disable_funcs();
-    vTaskDelay(pdMS_TO_TICKS(200));
-    //puts("BT Manual Switch Off");
-
-    switch_on = false;
-    BT_already_on = false;
-    
-    } else if ((BT_already_on == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
-    {
-        bt_disable_funcs();
-        //puts("BT Timeout Switch Off");
-        BT_already_on = false;
-    } else {
-    
-    vTaskDelay(pdMS_TO_TICKS(1000));   
-    } puts("BT_off end");
-} 
-    }
-
-void BT_Control_Task(void *arg)
-{
-
-    for(;;)
+    while(1)
     {
         puts("BT_control_task - begin (end wont show because restart)");
-         if((BT_already_on == false) && (switch_on == true))
+        if((BT_already_on == false) && (switch_on == true))
         {
             puts("RESTARTING");
             esp_restart();
-        
-        }  vTaskDelay(pdMS_TO_TICKS(1000));
+        }  
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 

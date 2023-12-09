@@ -46,18 +46,18 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void read_and_store_data(const char *data);
-void slice_string(const char *data);
-void init_rate_storage_nvs_partition(void);
-void write_basal_rate_data(int delivery_amount);
-void retreive_data(void* arg);
-void get_current_time(void* arg);
-void give_insulin(void* arg);
-void bolus_delivery(void* arg);
-int set_delivery_frequency_test(int freq);
-void rewind_plunge(void* arg);
-bool check_bolus_cancelled();
-void begin_low_power(void*args);
+void INSRATE_readAndStoreData           ( const char * );
+void INSRATE_sliceString                ( const char * );
+void INSRATE_initStoragePartition       ( void );
+void INSRATE_writeData_basalRate        ( int );
+int  INSRATE_setDeliveryFrequencyTest   ( int );
+bool INSRATE_checkBolusCancelled        ( void );
+
+void task_INSRATE_retreiveData  ( void * );
+void task_INSRATE_giveInsulin   ( void * );
+void task_INSRATE_beginLowPower ( void * );
+void task_INSRATE_deliverBolus  ( void * );
+void task_INSRATE_rewindPlunger ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

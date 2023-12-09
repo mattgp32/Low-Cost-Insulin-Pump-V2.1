@@ -44,7 +44,91 @@ extern bool BT_already_on;
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void buzzer_init(void)
+/*
+ * Description
+ */
+void LED_init ( void )
+{
+   gpio_reset_pin(LED3);
+   // initialise all LEDs and set them to be turned off initially
+   gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
+   gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
+   gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
+   gpio_set_level(LED1, false);
+   gpio_set_level(LED2, true);
+   gpio_set_level(LED3, true);
+}
+
+/*
+ * Description
+ */
+void LED_on ( int LED )
+{
+   gpio_set_level(LED, false);
+}
+
+/*
+ * Description
+ */
+void LED_off( int LED )
+{
+   gpio_set_level(LED, true);
+}
+
+/*
+ * Description
+ */
+void LED_flashFive ( void )
+{
+   for(int i = 0; i < 5; i++)
+   {
+      LED_on(LED2);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_off(LED2);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+   }
+}
+
+/*
+ * Description
+ */
+void LED_flashDouble ( void )
+{
+   for(int i = 0; i < 5; i++)
+   {
+      LED_on(LED2);
+      LED_on(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_off(LED2);
+      LED_off(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+   }
+}
+
+/*
+ * Description
+ */
+void LED_wave ( void )
+{
+   for (int i = 0; i <4;i++)
+   {
+      LED_on(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on(LED2);
+      LED_off(LED1);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on(LED3);
+      LED_off(LED2);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_off(LED3);
+   }
+
+}
+
+/*
+ * Description
+ */
+void BUZZER_init ( void )
 {
    // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
@@ -69,140 +153,82 @@ void buzzer_init(void)
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 }
 
-void init_leds( void)
-{
-   gpio_reset_pin(LED3);
-   // initialise all LEDs and set them to be turned off initially
-   gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
-   gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
-   gpio_set_level(LED1, false);
-   gpio_set_level(LED2, true);
-   gpio_set_level(LED3, true);
-}
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void led_on(int LED)
+/*
+ * Description
+ */
+void task_LED_displayBattLevel ( void *arg )
 {
-   gpio_set_level(LED, false);
-}
-
-void led_off(int LED)
-{
-   gpio_set_level(LED, true);
-}
-
-void display_batt_level(void* arg)
-{
-   for(;;)
+   while(1)
    {
-   int* pBattLevel;
-   int battlevel;
-   pBattLevel = &battlevel;
+      int* pBattLevel;
+      int battlevel;
+      pBattLevel = &battlevel;
 
-   if (uxQueueMessagesWaiting(battLevelQueue)> 0) 
-   {
-      xQueueReceive(battLevelQueue, pBattLevel, 10);
-
-      //printf("Batt level read as %d mV\n", battlevel);
-
-      if (battlevel < BATT_MED)
+      if (uxQueueMessagesWaiting(battLevelQueue)> 0) 
       {
-               for(int i = 0; i < 3; i++)
+         xQueueReceive(battLevelQueue, pBattLevel, 10);
+
+         //printf("Batt level read as %d mV\n", battlevel);
+
+         if (battlevel < BATT_MED)
          {
-            led_wave();
-            printf("Batt Low\n");
+                  for(int i = 0; i < 3; i++)
+            {
+               LED_wave();
+               printf("Batt Low\n");
+            }
+
+               // printf("Batt High\n");
+
          }
-
-            // printf("Batt High\n");
-
+         vTaskDelay(pdMS_TO_TICKS(60000));
+         // printf("Queue read\n");
       }
       vTaskDelay(pdMS_TO_TICKS(60000));
-      // printf("Queue read\n");
-   }
-   vTaskDelay(pdMS_TO_TICKS(60000));
-   // printf("Queue not read\n");
+      // printf("Queue not read\n");
    }
 }
 
-void led_five_flash()
+/*
+ * Description
+ */
+void task_LED_noBasilWarning ( void *arg )
 {
-   for(int i = 0; i < 5; i++)
+   while(1)
    {
-      led_on(LED2);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      led_off(LED2);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-   }
-}
-
-void led_double_flash()
-{
-   for(int i = 0; i < 5; i++)
-   {
-      led_on(LED2);
-      led_on(LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      led_off(LED2);
-      led_off(LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-   }
-}
-
-void led_wave()
-{
-   for (int i = 0; i <4;i++)
-   {
-      led_on(LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      led_on(LED2);
-      led_off(LED1);
-       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      led_on(LED3);
-      led_off(LED2);
-       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      led_off(LED3);
-   }
-
-}
-
-void annoying_buzzer(void* arg)
-{
-   for(;;)
-   {
-   ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY);
-   vTaskDelay(pdMS_TO_TICKS(1000));
-   }
-}
-
-void no_br_warning(void*arg)
-{
-   for(;;){
       puts("no br warning begin");
-   int32_t basal_rate = 0;
-   nvs_handle_t br_handle;
-   nvs_flash_init_partition("rate_storage");
-   nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
-   nvs_get_i32(br_handle, "basal_rate", &basal_rate);
+      int32_t basal_rate = 0;
+      nvs_handle_t br_handle;
+      nvs_flash_init_partition("rate_storage");
+      nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
+      nvs_get_i32(br_handle, "basal_rate", &basal_rate);
 
-   if(basal_rate == 0)
-   {
-      led_double_flash();
+      if(basal_rate == 0)
+      {
+         LED_flashDouble();
+      }
+      vTaskDelay(pdMS_TO_TICKS(120000));
+      puts("no br warning end");
    }
-   vTaskDelay(pdMS_TO_TICKS(120000));
-   puts("no br warning end");
-}
 }
 
-void BT_running_alert(void*args)
+/*
+ * Description
+ */
+void task_LED_bluetoothRunningAlert ( void *args )
 {
-   for(;;)
+   while(1)
    {
       puts("BT_running_alert - begin");
       if (BT_already_on == true)
       {
-      led_on(2);
+      LED_on(2);
       vTaskDelay(pdMS_TO_TICKS(500));
-      led_off(2);
+      LED_off(2);
       vTaskDelay(pdMS_TO_TICKS(500));
       } else {
          vTaskDelay(pdMS_TO_TICKS(2000));
@@ -211,37 +237,51 @@ void BT_running_alert(void*args)
    }
 }
 
-void pump_is_alive(void*args)
+/*
+ * Description
+ */
+void task_LED_pumpIsAlive ( void *args )
 {
-   for(;;)
+   while(1)
    {
       puts("pump_is_alive - begin");
-      if(BT_already_on == false){
-        
-            led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_on(LED2);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_off(LED2);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-             led_on(LED3);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_off(LED3);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-             led_on(LED2);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_off(LED2);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-             led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
-         
-
-      } vTaskDelay(pdMS_TO_TICKS(60000));
+      if(BT_already_on == false)
+      { 
+         LED_on(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED3);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED3);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+      } 
+      vTaskDelay(pdMS_TO_TICKS(60000));
       puts("pump_is_alive - end");
+   }
+}
+
+/*
+ * Description
+ */
+void task_BUZZER_annoying ( void *arg )
+{
+   while(1)
+   {
+      ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY);
+      vTaskDelay(pdMS_TO_TICKS(1000));
    }
 }
 

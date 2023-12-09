@@ -41,8 +41,10 @@ uint32_t steps_turned = 0;
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void init_motor()
-// Initialise all the pins required to allow the motor to be driven
+/*
+ * Initialise all the pins required to allow the motor to be driven.
+ */
+void MOTOR_init ( void )
 {
     gpio_set_direction(nFAULT, GPIO_MODE_INPUT);
     gpio_set_direction(DIR, GPIO_MODE_OUTPUT);
@@ -53,7 +55,10 @@ void init_motor()
     gpio_set_level(MOTOR_DRIVER_ENABLE, true);
 }
 
-void enable_motor()
+/*
+ * Description
+ */
+void MOTOR_enable ( void )
 {
 	gpio_set_level(BOOST_EN, true);
     gpio_set_level(MOTOR_DRIVER_ENABLE, false);
@@ -61,7 +66,10 @@ void enable_motor()
 	vTaskDelay(200/portTICK_PERIOD_MS);
 }
 
-void disable_motor()
+/*
+ * Description
+ */
+void MOTOR_disable ( void )
 {
 	gpio_set_level(BOOST_EN, false);
     gpio_set_level(MOTOR_DRIVER_ENABLE, true);
@@ -69,48 +77,58 @@ void disable_motor()
 	vTaskDelay(200/portTICK_PERIOD_MS);
 }
 
-bool read_motor_fault_pin()
-// read the status of the motor fault pin. Return false if there is a fault with the motor and a true if all is good.
+/*
+ * Read the status of the motor fault pin. Return false if there is a fault with the motor and a true if all is good.
+ */
+bool MOTOR_readFaultPin ( void )
 {
 	bool fault_pin = gpio_get_level(nFAULT);
 	return fault_pin;
 }
 
-void set_motor_direction(bool direction)
-// call this function to change the value of the DIR pin on the IC which controls the direction the motor turns
+/*
+ * Call this function to change the value of the DIR pin on the IC which controls the direction the motor turns.
+ */
+void MOTOR_setDir ( bool direction )
 {
 	gpio_set_level(DIR, direction);
 }
 
-
-void step_motor(bool direction)
-/* this function will call set_motor_direction() to set the motor function to turn one step in the direction of the passed variable. If there is a falult with the motor nothing will happen.
-   One step will then be recorded in the steps_turned variable to keep track of how much the motor has turned */
+/*
+ * This function will call set_motor_direction() to set the motor function to turn one step in the direction of the passed variable.
+ * If there is a falult with the motor nothing will happen.
+ * One step will then be recorded in the steps_turned variable to keep track of how much the motor has turned.
+ */
+void MOTOR_step ( bool direction )
 {
-		set_motor_direction(direction);
-		gpio_set_level(STEP, 1);
-		vTaskDelay(1);
-		gpio_set_level(STEP, 0);
-		vTaskDelay(1);
-		steps_turned += 1;
-	
-	
+	MOTOR_setDir(direction);
+	gpio_set_level(STEP, 1);
+	vTaskDelay(1);
+	gpio_set_level(STEP, 0);
+	vTaskDelay(1);
+	steps_turned += 1;
 }
 
-void turn_x_steps(bool direction, uint16_t steps_to_turn)
-/* this function will turn the motor x number of steps in the specified direction. x will have to be worked out from the basal rate, bolus rate, and motor testing to determine
-   how much insulin is actually required */ 
+/*
+ * This function will turn the motor x number of steps in the specified direction.
+ * x will have to be worked out from the basal rate, bolus rate, and motor testing to determine how much insulin is actually required.
+ */
+void MOTOR_stepX ( bool direction, uint16_t steps ) 
 {
-	enable_motor();
+	MOTOR_enable();
 
-	while(steps_to_turn > 0)
+	while( steps > 0 )
 	{
-		step_motor(direction);
-		steps_to_turn -=1;
+		MOTOR_step(direction);
+		steps -=1;
 	}
 
-	disable_motor();
+	MOTOR_disable();
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE FUNCTIONS                                    */
