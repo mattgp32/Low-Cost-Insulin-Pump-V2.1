@@ -36,9 +36,9 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void init_button ( void );
-void init_isr    ( void );
-void print_num   ( void * );
+void BUTTON_init ( void );
+
+void task_BUTTON_printNum ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

@@ -32,28 +32,26 @@ bool switch_on = false;
 /*
  * Description
  */
-void init_button ( void )
+void BUTTON_init ( void )
 {
     gpio_reset_pin(BUTTON_PIN);
     gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
     gpio_set_pull_mode(BUTTON_PIN, GPIO_FLOATING);
-}
 
-/*
- * Description
- */
-void init_isr ( void )
-{
     gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE);
     gpio_intr_enable(BUTTON_PIN);
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     gpio_isr_handler_add(BUTTON_PIN, button_isr, NULL);
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 /*
  * Description
  */
-void print_num ( void *args )
+void task_BUTTON_printNum ( void *args )
 {
     while(1)
     {
@@ -87,10 +85,6 @@ void print_num ( void *args )
      puts("Print_num end");
     } 
 }
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* RTOS FUNCTIONS                                       */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE FUNCTIONS                                    */
