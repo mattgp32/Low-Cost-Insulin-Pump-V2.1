@@ -26,11 +26,6 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void MOTOR_enable 			( void );
-void MOTOR_disable 			( void );
-bool MOTOR_getFaultStatus	( void );
-void MOTOR_stepMotor 		( bool );
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -58,27 +53,6 @@ void MOTOR_init ( void )
 }
 
 /*
- * Turn The Motor 'steps' Number of Steps In Defined Direction 
- */
-void MOTOR_turnSteps ( bool dir, uint16_t steps )
-{
-	// Enable Motor Driver Functionality
-	MOTOR_enable();
-	// Turn Motor Defined Steps
-	while ( steps > 0 )
-	{
-		MOTOR_stepMotor(dir);
-		steps -= 1;
-	}
-	// Disable Motor For Power Saving
-	MOTOR_disable();
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-/*
  * Enable Motor Driver Functionality
  */
 void MOTOR_enable ( void )
@@ -103,16 +77,24 @@ void MOTOR_disable ( void )
 /*
  * Retrieve Status of Motor Driver Fault Pin
  */
-bool MOTOR_getFaultStatus ( void )
+bool MOTOR_readFaultPin ( void )
 {
 	return gpio_get_level( MOTOR_PIN_nFAULT );
+}
+
+/*
+ * Description
+ */
+void MOTOR_setDir ( bool direction )
+{
+	gpio_set_level(MOTOR_PIN_DIR, direction);
 }
 
 /*
  * this function will call MOTOR_stepMotorDir() to set the motor function to turn one MOTOR_PIN_STEP in the MOTOR_PIN_DIRection of the passed variable. If there is a falult with the motor nothing will happen.
  * One MOTOR_PIN_STEP will then be recorded in the MOTOR_PIN_stepsTurned variable to keep track of how much the motor has turned
  */
-void MOTOR_stepMotor ( bool dir )
+void MOTOR_step ( bool dir )
 {
 	// Set The Motor Driver Direction
 	gpio_set_level( MOTOR_PIN_DIR,	dir );
@@ -124,6 +106,31 @@ void MOTOR_stepMotor ( bool dir )
 	// Increment Step Counter
 	stepsTurned += 1;
 }
+
+/*
+ * Turn The Motor 'steps' Number of Steps In Defined Direction 
+ */
+void MOTOR_stepX ( bool dir, uint16_t steps )
+{
+	// Enable Motor Driver Functionality
+	MOTOR_enable();
+	// Turn Motor Defined Steps
+	while ( steps > 0 )
+	{
+		MOTOR_step(dir);
+		steps -= 1;
+	}
+	// Disable Motor For Power Saving
+	MOTOR_disable();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

@@ -1,6 +1,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#include "battery.h"
+#include "adc.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE DEFINITIONS                                  */
@@ -16,8 +16,6 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void task_BATTERY_handler ( void* arg );
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -29,42 +27,18 @@ QueueHandle_t battLevelQueue = NULL;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Initialise ...
+ * Description
  */
-void BATTERY_init ( void )
+void ADC_init ( void )
 {
-    // Create the Queue
-
     // Launch the RTOS Task
-    xTaskCreate(task_BATTERY_handler, "Battery_Handler_Task", CONFIG_BATTERY_TASK_HEAP*1024, NULL, CONFIG_BATTERY_TASK_PRIORITY, NULL);
+    xTaskCreate(task_ADC_getBattLevel, "Battery_Handler_Task", CONFIG_BATTERY_TASK_HEAP*1024, NULL, CONFIG_BATTERY_TASK_PRIORITY, NULL);
 }
 
-
 /*
- * Function Description
+ * Description
  */
-void BATTERY_printBattLevel ( void )
-{
-    int* pBattLevel;
-    int battlevel;
-    pBattLevel = &battlevel;
-
-    xQueueReceive(battLevelQueue, pBattLevel, 10);
-
-    //printf("Current battery level is %d mV", battlevel); // This print was just to check the function works during development and it does. Hence I have commentented it out. 
-    // If you want to put it back in make sure you increase the freertos stack size of this function or it will crash because printf uses loads of memory
-
-    vTaskDelay(10000/portTICK_PERIOD_MS);
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-/*
- * Function Description
- */
-void task_BATTERY_handler ( void* arg )
+void task_ADC_getBattLevel ( void *arg )
 {
     // Create Function Variables
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -107,6 +81,32 @@ void task_BATTERY_handler ( void* arg )
     }
 
 }
+
+/*
+ * Description
+ */
+void ADC_printBattLevel ( void )
+{
+    int* pBattLevel;
+    int battlevel;
+    pBattLevel = &battlevel;
+
+    xQueueReceive(battLevelQueue, pBattLevel, 10);
+
+    // printf("Current battery level is %d mV", battlevel); 
+    // This print was just to check the function works during development and it does. Hence I have commentented it out. 
+    // If you want to put it back in make sure you increase the freertos stack size of this function or it will crash because printf uses loads of memory
+
+    vTaskDelay(10000/portTICK_PERIOD_MS);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

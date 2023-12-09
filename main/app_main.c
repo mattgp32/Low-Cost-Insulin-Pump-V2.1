@@ -19,7 +19,7 @@
 #include "ble_comp_test.h"
 
 #include "motor.h"
-#include "battery.h"
+#include "adc.h"
 #include "buzzer.h"
 #include "leds.h"
 #include "pump_BT.h"
@@ -48,11 +48,14 @@
 void app_main(void)
 {
     LED_init();
-    BATTERY_init();
+    ADC_init();
     BUZZER_init();
     // BT_init();
-    INS_RATE_Init();
     MOTOR_init();
+
+    INSRATE_start();
+    LED_start();
+
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

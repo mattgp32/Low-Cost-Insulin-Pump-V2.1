@@ -468,12 +468,12 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Battery Module Configuration
+# ADC Module Configuration
 #
 CONFIG_BATTERY_TASK_INTERVAL=10000
 CONFIG_BATTERY_TASK_HEAP=1
 CONFIG_BATTERY_TASK_PRIORITY=5
-# end of Battery Module Configuration
+# end of ADC Module Configuration
 
 #
 # Bluetooth Module Configuration

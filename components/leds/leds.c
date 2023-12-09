@@ -6,51 +6,24 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define GPIO_LED1    GPIO_NUM_3
-#define GPIO_LED2    GPIO_NUM_46
-#define GPIO_LED3    GPIO_NUM_9
+#define GPIO_LED1       GPIO_NUM_3
+#define GPIO_LED2       GPIO_NUM_46
+#define GPIO_LED3       GPIO_NUM_9
 
-#define LEDC_TIMER LEDC_TIMER_0
-#define LEDC_MODE LEDC_LOW_SPEED_MODE
-#define LEDC_OUTPUT_IO GPIO_NUM_21
-#define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_DUTY (4095)                // Set duty to 50%. ((2 ** 13) - 1) * 50% = 4095
-#define LEDC_FREQUENCY (2500)           // Frequency in Hertz. Set frequency at 5 kHz
+#define BATT_HIGH       2000
+#define BATT_MED        1900
+#define BATT_LOW        1800
 
-#define BATT_HIGH 2000
-#define BATT_MED 1900
-#define BATT_LOW 1800
-
-#define LED_FLASH_TIME 100
+#define LED_FLASH_TIME  100
+#define LED_FLASH_TIME2 50
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-typedef enum {
-   LED_OFF,
-   LED_ON,
-   LED_FLASH,
-} LED_modes;
-
-typedef struct {
-   LED_modes led1;
-   LED_modes led2;
-   LED_modes led3;
-} LED_moduleStatus;
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-void task_LED_handler            ( void * );
-void task_LED_warningNoBasalRate ( void * );
-
-void LED_update ( int, LED_modes );
-
-void LED_on  ( int );
-void LED_off ( int );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
@@ -58,22 +31,15 @@ void LED_off ( int );
 
 extern QueueHandle_t battLevelQueue;
 
-LED_moduleStatus status = {
-   .led1 = LED_OFF,
-   .led2 = LED_OFF,
-   .led3 = LED_OFF,
-};
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Function Description
+ * Description
  */
 void LED_init ( void )
 {
-   // INITIALISE GPIO
    gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
@@ -81,14 +47,35 @@ void LED_init ( void )
    LED_on(GPIO_LED1);
    LED_off(GPIO_LED2);
    LED_off(GPIO_LED3);
+  }
 
-   // Initialias RTOS Task
-   xTaskCreate(task_LED_handler, "LED_Handler_Task", CONFIG_LED_TASK_HEAP*1024, NULL, CONFIG_LED_TASK_PRIORITY, NULL);
-   xTaskCreate(task_LED_warningNoBasalRate,  "LED_No_BasalRate_Warning_Task", CONFIG_LED_TASK_HEAP_NO_BASAL_RATE_WARNING*1024,   NULL, CONFIG_LED_TASK_NO_BASAL_RATE_WARNING, NULL);
+/*
+ * Description
+ */
+void LED_start ( void )
+{
+   xTaskCreate(task_LED_displayBattLevel, "LED_Handler_Task", CONFIG_LED_TASK_HEAP*1024, NULL, CONFIG_LED_TASK_PRIORITY, NULL);
+   xTaskCreate(task_LED_noBasalWarning,  "LED_No_BasalRate_Warning_Task", CONFIG_LED_TASK_HEAP_NO_BASAL_RATE_WARNING*1024,   NULL, CONFIG_LED_TASK_NO_BASAL_RATE_WARNING, NULL);
 }
 
 /*
- * Function Description
+ * Description
+ */
+void LED_on ( int led )
+{
+   gpio_set_level(led, false);
+}
+
+/*
+ * Description
+ */
+void LED_off ( int led )
+{
+   gpio_set_level(led, true);
+}
+
+/*
+ * Description
  */
 void LED_fiveFlash ( void )
 {
@@ -102,7 +89,7 @@ void LED_fiveFlash ( void )
 }
 
 /*
- * Function Description
+ * Description
  */
 void LED_doubleFlash ( void )
 {
@@ -118,13 +105,13 @@ void LED_doubleFlash ( void )
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
+/* RTOS FUNCTIONS                                       */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
  * Blink LED depending on batt level
  */
-void task_LED_handler ( void *arg )
+void task_LED_displayBattLevel ( void *arg )
 {
    // Create Function Variables
    TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -190,7 +177,7 @@ void task_LED_handler ( void *arg )
 /*
  * flash led if br = 0
  */
-void task_LED_warningNoBasalRate ( void *arg )
+void task_LED_noBasalWarning ( void *arg )
 {
    // Create Function Variables
    TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -217,36 +204,9 @@ void task_LED_warningNoBasalRate ( void *arg )
    }
 }
 
-/*
- *
- */
-void LED_update ( int led, LED_modes mode )
-{
-   switch (mode) {
-   case LED_OFF:
-      break;
-   case LED_ON:
-      break;
-   case LED_FLASH:
-      break;
-   }
-}
-
-/*
- * Function Description
- */
-void LED_on ( int led )
-{
-   gpio_set_level(led, false);
-}
-
-/*
- * Function Description
- */
-void LED_off ( int led )
-{
-   gpio_set_level(led, true);
-}
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EVENT HANDLERS                                       */

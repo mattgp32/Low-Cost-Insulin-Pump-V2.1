@@ -1,4 +1,4 @@
-menu "Battery Module Configuration"
+menu "ADC Module Configuration"
 
     config BATTERY_TASK_INTERVAL
         int "Battery Handler Task Loop Interval"

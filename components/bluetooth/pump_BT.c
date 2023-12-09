@@ -802,7 +802,7 @@ void task_BLUETOOTH_ProcessData ( void *arg )
     while(1)
     {
         if( pdPASS == xSemaphoreTake(data_ready, 0) ) {
-            INS_RATE_dataReadAndStore(bt_data);   
+            INSRATE_readAndStoreData(bt_data);   
         }
         memset(bt_data, 0, sizeof(bt_data));
 

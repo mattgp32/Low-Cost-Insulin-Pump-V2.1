@@ -4,11 +4,13 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #include "stdint.h"
-#include <stdbool.h>
+#include "stdbool.h"
 #include "stdio.h"
-#include "driver/gpio.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
+#include "driver/gpio.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
@@ -23,7 +25,12 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void MOTOR_init         ( void );
-void MOTOR_turnSteps    ( bool, uint16_t );
+void MOTOR_enable 		( void );
+void MOTOR_disable 		( void );
+bool MOTOR_readFaultPin ( void );
+void MOTOR_setDir       ( bool );
+void MOTOR_step 		( bool );
+void MOTOR_stepX        ( bool, uint16_t );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */
