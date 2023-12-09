@@ -17,7 +17,7 @@ extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-void init_leds();
+void init_leds( void );
 void led_on(int LED);
 void led_off(int LED);
 void display_batt_level(void* arg);

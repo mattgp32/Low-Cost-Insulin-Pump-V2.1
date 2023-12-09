@@ -67,14 +67,14 @@ void buzzer_init(void)
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
 }
 
-void init_leds()
+void init_leds( void)
 {
    gpio_reset_pin(LED3);
    // initialise all LEDs and set them to be turned off initially
    gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
    gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
-   gpio_set_level(LED1, true);
+   gpio_set_level(LED1, false);
    gpio_set_level(LED2, true);
    gpio_set_level(LED3, true);
 }
@@ -176,7 +176,7 @@ void no_br_warning(void*arg)
 {
    for(;;){
       puts("no br warning begin");
-   int basal_rate = 0;
+   int32_t basal_rate = 0;
    nvs_handle_t br_handle;
    nvs_flash_init_partition("rate_storage");
    nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);

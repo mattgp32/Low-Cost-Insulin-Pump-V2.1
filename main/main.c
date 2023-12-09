@@ -1,35 +1,36 @@
+#include "stdio.h"
 #include <inttypes.h>
+#include <assert.h>
+#include "nvs_flash.h"
+#include "driver/gptimer.h"
+#include "driver/gpio.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h" 
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
-#include "motor.h"
-#include "ble_comp_test.h"
-#include "adc.h"
-#include "leds.h"
-#include "stdio.h"
-#include "pump_BT.h"
-#include <assert.h>
-#include "nvs_flash.h"
+
 #include "esp_bt.h"
 #include "esp_err.h"
 #include "esp_pm.h"
 #include "esp_log.h"
-#include "ins_rate.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "driver/gptimer.h"
 #include "esp_pm.h"
-#include "driver/gpio.H"
 #include "esp_private/esp_clk.h"
 #include "esp_sleep.h"
 #include "esp_timer.h"
+#include "ble_comp_test.h"
 
-
+#include "adc.h"
+#include "motor.h"
+#include "leds.h"
+#include "ins_rate.h"
+#include "pump_BT.h"
 
 #define POT_POWER GPIO_NUM_37
 #define BUTTON_PIN GPIO_NUM_5
@@ -113,15 +114,15 @@ void take_a_nap(void * args)
         vTaskDelay(500);
         esp_light_sleep_start();
         vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
-        led_double_flash();
+        // led_double_flash();
         } vTaskDelay(200);
     } 
 }
 
 void app_main(void)
 {
-//Initialise system peripherals to be used after freeRTOS starts
-    esp_pm_config_esp32s3_t pm_config = {
+    //Initialise system peripherals to be used after freeRTOS starts
+    esp_pm_config_t pm_config = {
             .max_freq_mhz = 80,
             .min_freq_mhz = 40,
            .light_sleep_enable = false,

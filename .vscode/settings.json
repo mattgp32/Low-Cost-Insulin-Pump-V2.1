@@ -12,6 +12,9 @@
         "esp_gatt_common_api.h": "c",
         "esp_clk.h": "c",
         "sdkconfig.h": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "ble_comp_test.h": "c",
+        "pump_bt.h": "c",
+        "adc.h": "c"
     }
 }

@@ -58,7 +58,7 @@ extern bool disable_BT;
 // Function to slice a string and find the index of two asterisks contained within it
 
 bool check_bolus_cancelled() {
-    int bolus_size = 0;
+    int32_t bolus_size = 0;
     nvs_handle_t bo_handle;
     bool cancelled = false;
     nvs_flash_init_partition("rate_storage");
@@ -195,7 +195,7 @@ void write_rewind_data(int delivery_amount)
 
 int set_delivery_frequency(void)
 {
-    int basal_rate = 0;
+    int32_t basal_rate = 0;
     nvs_handle_t br_handle;
 
     nvs_flash_init_partition("rate_storage");
@@ -298,8 +298,8 @@ void retreive_data(void* arg)
 {
     for(;;)
     {
-    int basal_rate = 0;
-    int bolus_size = 0;
+    int32_t basal_rate = 0;
+    int32_t bolus_size = 0;
     
     long long int elapsed_time;
     
@@ -320,8 +320,8 @@ void retreive_data(void* arg)
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
     nvs_get_i32(br_handle, "basal_rate", &basal_rate);
     nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-    printf("Current basal rate is %d\n", basal_rate);
-    printf("Current bolus amount is %d\n", bolus_size);
+    printf("Current basal rate is %ld\n", basal_rate);
+    printf("Current bolus amount is %ld\n", bolus_size);
     vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
@@ -393,7 +393,7 @@ void bolus_delivery(void* arg)
     {
         puts("bolus_delivery begin");
         nvs_handle_t bo_handle;
-        int bolus_size = 0;
+        int32_t bolus_size = 0;
 
         if(bolus_ready == true)
         {
