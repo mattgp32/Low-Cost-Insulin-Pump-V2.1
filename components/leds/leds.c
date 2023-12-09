@@ -6,20 +6,23 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define GPIO_LED1       GPIO_NUM_3
-#define GPIO_LED2       GPIO_NUM_46
-#define GPIO_LED3       GPIO_NUM_9
+#define LED1 GPIO_NUM_1
+#define LED2 GPIO_NUM_2
+#define LED3 GPIO_NUM_42
 
-#define BATT_HIGH       2000
-#define BATT_MED        1900
-#define BATT_LOW        1800
+#define BATT_HIGH 2000
+#define BATT_MED 1900
+#define BATT_LOW 1800
 
-#define LED_FLASH_TIME  100
+#define LED_FLASH_TIME 100
 #define LED_FLASH_TIME2 50
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+extern QueueHandle_t battLevelQueue;
+extern bool BT_already_on;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE PROTOTYPES                                   */
@@ -28,8 +31,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-extern QueueHandle_t battLevelQueue;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -40,46 +41,38 @@ extern QueueHandle_t battLevelQueue;
  */
 void LED_init ( void )
 {
-   gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
-   gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
-   gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
-
-   LED_on(GPIO_LED1);
-   LED_off(GPIO_LED2);
-   LED_off(GPIO_LED3);
-  }
-
-/*
- * Description
- */
-void LED_start ( void )
-{
-   xTaskCreate(task_LED_displayBattLevel, "LED_Handler_Task", CONFIG_LED_TASK_HEAP*1024, NULL, CONFIG_LED_TASK_PRIORITY, NULL);
-   xTaskCreate(task_LED_noBasalWarning,  "LED_No_BasalRate_Warning_Task", CONFIG_LED_TASK_HEAP_NO_BASAL_RATE_WARNING*1024,   NULL, CONFIG_LED_TASK_NO_BASAL_RATE_WARNING, NULL);
+   gpio_reset_pin(LED3);
+   // initialise all LEDs and set them to be turned off initially
+   gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
+   gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
+   gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
+   gpio_set_level(LED1, false);
+   gpio_set_level(LED2, true);
+   gpio_set_level(LED3, true);
 }
 
 /*
  * Description
  */
-void LED_on ( int led )
+void LED_on ( int LED )
 {
-   gpio_set_level(led, false);
+   gpio_set_level(LED, false);
 }
 
 /*
  * Description
  */
-void LED_off ( int led )
+void LED_off( int LED )
 {
-   gpio_set_level(led, true);
+   gpio_set_level(LED, true);
 }
 
 /*
  * Description
  */
-void LED_fiveFlash ( void )
+void LED_flashFive ( void )
 {
-   for (int i = 0; i < 5; i++)
+   for(int i = 0; i < 5; i++)
    {
       LED_on(GPIO_LED2);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
@@ -91,17 +84,37 @@ void LED_fiveFlash ( void )
 /*
  * Description
  */
-void LED_doubleFlash ( void )
+void LED_flashDouble ( void )
 {
-   for (int i = 0; i < 5; i++)
+   for(int i = 0; i < 5; i++)
    {
-      LED_on(GPIO_LED2);
-      LED_on(GPIO_LED3);
+      LED_on(LED2);
+      LED_on(LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(GPIO_LED2);
-      LED_off(GPIO_LED3);
+      LED_off(LED2);
+      LED_off(LED1);
       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
    }
+}
+
+/*
+ * Description
+ */
+void LED_wave ( void )
+{
+   for (int i = 0; i <4;i++)
+   {
+      LED_on(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on(LED2);
+      LED_off(LED1);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on(LED3);
+      LED_off(LED2);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_off(LED3);
+   }
+
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -109,98 +122,118 @@ void LED_doubleFlash ( void )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Blink LED depending on batt level
+ * Description
  */
 void task_LED_displayBattLevel ( void *arg )
 {
-   // Create Function Variables
-   TickType_t xLastWakeTime = xTaskGetTickCount();
-
-   // Loop To Infinity And Beyond
-   while (1)
+   while(1)
    {
-      // Initialise Loop Variables
-      int *pBattLevel;
+      int* pBattLevel;
       int battlevel;
       pBattLevel = &battlevel;
 
-      // Is There An Entry In The Battery Queue
-      if (uxQueueMessagesWaiting(battLevelQueue) > 0)
+      if (uxQueueMessagesWaiting(battLevelQueue)> 0) 
       {
-         // Retrieve Item In Queue
          xQueueReceive(battLevelQueue, pBattLevel, 10);
 
-         // printf("Batt level read as %d mV\n", battlevel);
+         //printf("Batt level read as %d mV\n", battlevel);
 
-         // Battery Level - HIGH
-         if (battlevel > BATT_HIGH) {
-            // Log Battery Level
-            printf("Batt High\n");
-            // Flash LED 
-            LED_on(GPIO_LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            LED_off(GPIO_LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-         }  
-         // Battery Level - MEDIUM
-         else if (battlevel < BATT_HIGH && battlevel > BATT_MED) {
-            // Log Battery Level
-            printf("Batt Med\n");
-            // Flash LED Twice
-            for (int i = 0; i < 2; i++) {
-               LED_on(GPIO_LED1);
-               vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-               LED_off(GPIO_LED1);
-               vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+         if (battlevel < BATT_MED)
+         {
+                  for(int i = 0; i < 3; i++)
+            {
+               LED_wave();
+               printf("Batt Low\n");
             }
-         // Battery Level - LOW
-         } else {
-            // Log Battery Level
-            printf("Batt Low\n");
-            // Flash LED Thrice
-            for (int i = 0; i < 3; i++) {
-               LED_on(GPIO_LED1);
-            }
+
+               // printf("Batt High\n");
+
          }
-         vTaskDelay(pdMS_TO_TICKS(9500));
-         printf("Queue read\n");
+         vTaskDelay(pdMS_TO_TICKS(60000));
+         // printf("Queue read\n");
       }
-
-      // Loop Pacing
-      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_LED_TASK_INTERVAL));
-
-      //
-      printf("Queue not read\n");
+      vTaskDelay(pdMS_TO_TICKS(60000));
+      // printf("Queue not read\n");
    }
 }
 
 /*
- * flash led if br = 0
+ * Description
  */
-void task_LED_noBasalWarning ( void *arg )
+void task_LED_noBasilWarning ( void *arg )
 {
-   // Create Function Variables
-   TickType_t xLastWakeTime = xTaskGetTickCount();
-
-   // Loop To Infinity And Beyond
-   while (1)
+   while(1)
    {
-      // Initialise Loop Variables
+      puts("no br warning begin");
       int32_t basal_rate = 0;
       nvs_handle_t br_handle;
+      nvs_flash_init_partition("rate_storage");
+      nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
+      nvs_get_i32(br_handle, "basal_rate", &basal_rate);
 
-      // 
-      nvs_flash_init_partition( "rate_storage" );
-      nvs_open_from_partition( "rate_storage", "basal_rate", NVS_READONLY, &br_handle );
-      nvs_get_i32( br_handle, "basal_rate", &basal_rate );
-
-      // 
-      if ( basal_rate == 0 ) {
-         LED_doubleFlash();
+      if(basal_rate == 0)
+      {
+         LED_flashDouble();
       }
+      vTaskDelay(pdMS_TO_TICKS(120000));
+      puts("no br warning end");
+   }
+}
 
-      // Loop Pacing
-      vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(CONFIG_LED_TASK_INTERVAL_NO_BASAL_RATE_WARNING));
+/*
+ * Description
+ */
+void task_LED_bluetoothRunningAlert ( void *args )
+{
+   while(1)
+   {
+      puts("BT_running_alert - begin");
+      if (BT_already_on == true)
+      {
+      LED_on(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
+      LED_off(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
+      } else {
+         vTaskDelay(pdMS_TO_TICKS(2000));
+      }
+      puts("BT_running_alert - end");
+   }
+}
+
+/*
+ * Description
+ */
+void task_LED_pumpIsAlive ( void *args )
+{
+   while(1)
+   {
+      puts("pump_is_alive - begin");
+      if(BT_already_on == false)
+      { 
+         LED_on(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED3);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED3);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED2);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_on(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         LED_off(LED1);
+         vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+      } 
+      vTaskDelay(pdMS_TO_TICKS(60000));
+      puts("pump_is_alive - end");
    }
 }
 

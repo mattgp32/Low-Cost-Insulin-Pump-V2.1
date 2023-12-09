@@ -1,0 +1,5 @@
+1. Firstly, you may need to make an account on MIT app inventor before you can import the file. The link to the website is here -> https://appinventor.mit.edu/search.html. Just click on the orange button on the top right hand side that says ‘create apps!’ and it will direct you to login
+2. Upload the .apk file into app inventor. This will allow you to modify the file if you choose.
+3. Once the file is in app inventor, you can use the build option at the top left hand side. Once the build is complete, you will have the option to scan a QR code which will download the app onto your phone.
+4. Alternatively, you may just be able to view this email on your phone and download the .apk directly onto the phone without using app inventor.
+5. Once the .apk is on the phone just click it to install it. You may need to have developer options enabled to make this work.

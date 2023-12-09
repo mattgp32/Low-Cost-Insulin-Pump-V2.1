@@ -1,22 +1,27 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#include "motor.h"
+#include "stdint.h"
+#include <stdbool.h>
+#include "stdio.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "rom/ets_sys.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define MOTOR_PIN_nFAULT 	GPIO_NUM_14
-#define MOTOR_PIN_DIR 		GPIO_NUM_11
-#define MOTOR_PIN_STEP 		GPIO_NUM_12
-#define MOTOR_PIN_BOOST 	GPIO_NUM_45
-#define MOTOR_PIN_enDRIVER	GPIO_NUM_13
-#define MOTOR_PIN_nSLEEP 	GPIO_NUM_10
+#define nFAULT GPIO_NUM_14
+#define DIR GPIO_NUM_11
+#define STEP GPIO_NUM_12
+#define BOOST_EN GPIO_NUM_45
+#define MOTOR_DRIVER_ENABLE GPIO_NUM_13
+#define nSLEEP GPIO_NUM_10
 
-#define MOTOR_FWD 			0
-#define MOTOR_RVS 			1
-
-#define MOTOR_DELAY_TIME 	500
+#define FORWARD 0
+#define BACKWARD 1
+#define DELAY_TIME 500
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -30,56 +35,52 @@
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-uint32_t stepsTurned = 0;
+uint32_t steps_turned = 0;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Initialise all the pins required to allow the motor to be driven
+ * Initialise all the pins required to allow the motor to be driven.
  */
 void MOTOR_init ( void )
 {
-	// 
-    gpio_set_direction( MOTOR_PIN_nFAULT, 	GPIO_MODE_INPUT );
-    gpio_set_direction( MOTOR_PIN_DIR, 		GPIO_MODE_OUTPUT );
-    gpio_set_direction( MOTOR_PIN_STEP, 	GPIO_MODE_OUTPUT );
-    gpio_set_direction( MOTOR_PIN_BOOST, 	GPIO_MODE_OUTPUT );
-    gpio_set_direction( MOTOR_PIN_enDRIVER,	GPIO_MODE_OUTPUT );
-	gpio_set_direction( MOTOR_PIN_nSLEEP, 	GPIO_MODE_OUTPUT );
-    //
-	gpio_set_level(     MOTOR_PIN_enDRIVER,	true );
+    gpio_set_direction(nFAULT, GPIO_MODE_INPUT);
+    gpio_set_direction(DIR, GPIO_MODE_OUTPUT);
+    gpio_set_direction(STEP, GPIO_MODE_OUTPUT);
+    gpio_set_direction(BOOST_EN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(MOTOR_DRIVER_ENABLE, GPIO_MODE_OUTPUT);
+	gpio_set_direction(nSLEEP, GPIO_MODE_OUTPUT);
+    gpio_set_level(MOTOR_DRIVER_ENABLE, true);
 }
 
 /*
  * Enable Motor Driver Functionality
  */
-void MOTOR_enable ( void )
-{
-	gpio_set_level( MOTOR_PIN_BOOST, 	true );
-    gpio_set_level( MOTOR_PIN_enDRIVER, false );
-	gpio_set_level( MOTOR_PIN_nSLEEP, 	true );
-	vTaskDelay( 200/portTICK_PERIOD_MS );
-}
-
-/*
- * Disable Motor Driver Functionality
- */
 void MOTOR_disable ( void )
 {
-	gpio_set_level( MOTOR_PIN_BOOST, 	false );
-    gpio_set_level( MOTOR_PIN_enDRIVER, true );
-	gpio_set_level( MOTOR_PIN_nSLEEP, 	false );
-	vTaskDelay( 200/portTICK_PERIOD_MS );
+	gpio_set_level(BOOST_EN, false);
+    gpio_set_level(MOTOR_DRIVER_ENABLE, true);
+	gpio_set_level(nSLEEP, false);
+	vTaskDelay(200/portTICK_PERIOD_MS);
 }
 
 /*
- * Retrieve Status of Motor Driver Fault Pin
+ * Read the status of the motor fault pin. Return false if there is a fault with the motor and a true if all is good.
  */
 bool MOTOR_readFaultPin ( void )
 {
-	return gpio_get_level( MOTOR_PIN_nFAULT );
+	bool fault_pin = gpio_get_level(nFAULT);
+	return fault_pin;
+}
+
+/*
+ * Call this function to change the value of the DIR pin on the IC which controls the direction the motor turns.
+ */
+bool MOTOR_readFaultPin ( void )
+{
+	gpio_set_level(DIR, direction);
 }
 
 /*
@@ -96,15 +97,12 @@ void MOTOR_setDir ( bool direction )
  */
 void MOTOR_step ( bool dir )
 {
-	// Set The Motor Driver Direction
-	gpio_set_level( MOTOR_PIN_DIR,	dir );
-	// Step Motor
-	gpio_set_level( MOTOR_PIN_STEP,	1 );
+	MOTOR_setDir(direction);
+	gpio_set_level(STEP, 1);
 	vTaskDelay(1);
-	gpio_set_level( MOTOR_PIN_STEP,	0 );
+	gpio_set_level(STEP, 0);
 	vTaskDelay(1);
-	// Increment Step Counter
-	stepsTurned += 1;
+	steps_turned += 1;
 }
 
 /*

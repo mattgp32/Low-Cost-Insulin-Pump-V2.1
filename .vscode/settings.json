@@ -19,6 +19,13 @@
       "usb.h": "c",
       "logging.h": "c",
       "leds.h": "c"
+        "adc_oneshot.h": "c",
+        "esp_gatt_common_api.h": "c",
+        "esp_clk.h": "c",
+        "sdkconfig.h": "c",
+        "queue.h": "c",
+        "adc.h": "c",
+        "button.h": "c"
     },
     "idf.adapterTargetName": "esp32s3" , 
     "C_Cpp.intelliSenseEngine": "default",
