@@ -40,7 +40,6 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define POT_POWER               GPIO_NUM_37
 #define uS_TO_S_FACTOR          1000000ULL
 #define uS_TO_TICKHZ_FACTOR     10000
 
@@ -52,9 +51,9 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void SYSTEM_init  ( void );
+void SYSTEM_init ( void );
 
-void task_SYSTEM_nap    ( void * );
+void task_SYSTEM_napTime ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
@@ -62,7 +61,6 @@ void task_SYSTEM_nap    ( void * );
 
 bool BT_already_on = true;
 bool low_power_enable = false;
-long long int timeb4slp = 0;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -100,7 +98,7 @@ void app_main(void)
     xTaskCreate(task_BT_handler, "BT_Control_Task", 2048, NULL, 10, NULL); //
     xTaskCreate(task_LED_bluetoothRunningAlert, "flash_led_when BT active", 2048, NULL, 15, NULL); //
     xTaskCreate(task_LED_pumpIsAlive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL); //
-    //xTaskCreate(task_SYSTEM_nap, "enable low power config after BT is off", 2048, NULL, 1, NULL);
+    //xTaskCreate(task_SYSTEM_napTime, "enable low power config after BT is off", 2048, NULL, 1, NULL);
     //xTaskCreate(task_INSRATE_beginLowPower, "enter sleep mode", 2048 , NULL, 19,NULL);
 }
 
@@ -111,8 +109,12 @@ void app_main(void)
 /*
  * Description
  */
-void task_SYSTEM_nap ( void *args )
+void task_SYSTEM_napTime ( void *args )
 {
+    // INIT FUNCTION VARIABLES
+    static long long int timeb4slp = 0;
+
+    // LOOP TO INFINITY AND BEYOND
     while (1)
     {
         if ( BT_already_on == false )
@@ -126,6 +128,8 @@ void task_SYSTEM_nap ( void *args )
             vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
             // LED_flashDouble();
         } 
+
+        // LOOP PACING
         vTaskDelay(200);
     } 
 }

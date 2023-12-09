@@ -18,5 +18,13 @@
         "adc.h": "c",
         "ins_rate.h": "c",
         "button.h": "c"
-    }
+    },
+    "idf.adapterTargetName": "esp32s3" , 
+    "C_Cpp.intelliSenseEngine": "default",
+    "idf.adapterTargetName": "esp32s3",
+    "idf.openOcdConfigs": [
+      "board/esp32s3-builtin.cfg"
+    ],
+    "idf.portWin": "COM3",
+    "idf.flashType": "UART"
 }
