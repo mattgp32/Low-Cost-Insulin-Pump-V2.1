@@ -1,28 +1,10 @@
-/* This module written by Matt Payne as part of the Bluetooth insulin pump project.
-   This module is used to store and control insulin delivery data
-   Started on 20/3/2023
-*/
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#include "stdint.h"
-#include "string.h"
-#include "stdio.h"
-#include "nvs_flash.h"
-#include "esp_system.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "freertos/queue.h" 
-#include "freertos/semphr.h"
-#include "leds.h"
-#include "time.h"
-#include "sys/time.h"
-#include "driver/gptimer.h"
-#include "motor.h"
-#include "driver/gpio.h"
-#include "esp_sleep.h"
-#include "esp_timer.h"
-#include "adc.h"
+#include "ins_rate.h"
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE DEFINITIONS                                  */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #define STEPS_PER_UNIT 740//(altered based on testing)
 #define SECONDS_TO_MS 1000
@@ -33,6 +15,18 @@
 #define MIN_BOLUS_DELIVERY_SIZE 50
 #define MIN_BOLUS_DELIVERY_STEPS 36
 #define uS_TO_S_FACTOR 1000000ULL
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE TYPES                                        */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE PROTOTYPES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE VARIABLES                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 uint8_t index_arr[2] = {0};
 time_t esp_time;
@@ -54,9 +48,13 @@ bool bolus_ready = false;
 bool RW_flag = false;
 extern bool disable_BT;
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC FUNCTIONS                                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// Function to slice a string and find the index of two asterisks contained within it
-
+/*
+ * Function to slice a string and find the index of two asterisks contained within it
+ */
 bool check_bolus_cancelled() {
     int32_t bolus_size = 0;
     nvs_handle_t bo_handle;
@@ -74,6 +72,7 @@ bool check_bolus_cancelled() {
 
     return cancelled;
 }
+
 void slice_string(const char *data)
 {
     uint8_t index = 0;
@@ -454,3 +453,17 @@ void rewind_plunge(void* arg)
     }
     
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* EVENT HANDLERS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* INTERRUPT ROUTINES                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

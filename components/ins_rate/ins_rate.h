@@ -1,14 +1,11 @@
-/* This module written by Matt Payne as part of the Bluetooth insulin pump project.
-   This module is used to store and control insulin delivery data
-   Started on 20/3/2023
-*/
-
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 #ifndef INS_RATE_H_INCLUDED
 #define INS_RATE_H_INCLUDED
-
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 #include "stdint.h"
 #include <stdbool.h>
@@ -16,9 +13,41 @@ extern "C" {
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "stdint.h"
+#include "string.h"
+#include "stdio.h"
+#include "nvs_flash.h"
+#include "esp_system.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "freertos/queue.h" 
+#include "freertos/semphr.h"
+#include "leds.h"
+#include "time.h"
+#include "sys/time.h"
+#include "driver/gptimer.h"
+#include "motor.h"
+#include "driver/gpio.h"
+#include "esp_sleep.h"
+#include "esp_timer.h"
+#include "adc.h"
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC DEFINITIONS                                   */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC TYPES                                         */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PUBLIC FUNCTIONS                                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void read_and_store_data(const char *data);
-uint8_t slice_string(const char *data, const char *ast);
+void slice_string(const char *data);
 void init_rate_storage_nvs_partition(void);
 void write_basal_rate_data(int delivery_amount);
 void retreive_data(void* arg);
@@ -30,7 +59,14 @@ void rewind_plunge(void* arg);
 bool check_bolus_cancelled();
 void begin_low_power(void*args);
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* EXTERN DECLARATIONS                                  */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 #ifdef _cplusplus
 }
 #endif
-#endif
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+#endif /* INS_RATE_H_INCLUDED */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

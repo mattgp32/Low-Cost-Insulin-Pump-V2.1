@@ -15,6 +15,7 @@
         "queue.h": "c",
         "ble_comp_test.h": "c",
         "pump_bt.h": "c",
-        "adc.h": "c"
+        "adc.h": "c",
+        "ins_rate.h": "c"
     }
 }
