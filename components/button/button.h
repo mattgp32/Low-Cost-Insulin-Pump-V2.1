@@ -13,13 +13,13 @@ extern "C" {
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h" 
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
 
+#include "esp_log.h"
 #include "driver/ledc.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -35,10 +35,9 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void BUTTON_init                ( void );
+void BUTTON_start               ( void );
 bool BUTTON_getPressedFlag      ( void );
 void BUTTON_resetPressedFlag    ( void );
-
-void task_BUTTON_handler ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

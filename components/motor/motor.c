@@ -6,6 +6,8 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define TAG							"MOTOR"
+
 #define MOTOR_DRIVER_GPIO_DIR 		GPIO_NUM_11
 #define MOTOR_DRIVER_GPIO_STEP 		GPIO_NUM_12
 #define MOTOR_DRIVER_GPIO_EN		GPIO_NUM_13
@@ -33,10 +35,13 @@ uint32_t steps_turned = 0;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * INITIALISE APPROPRIATE GPIO FOR MOTOR MODULE FUNCTIONALITY 
+ * Initialises Everything For Motor Module Functionality 
  */
 void MOTOR_init ( void )
 {
+	// LOG
+   	ESP_LOGI(TAG, "Initialising Motor Module");
+
 	// INITIALISE POWER SUPPLY AND MOTOR DRIVER GPIO 
     gpio_set_direction( MOTOR_POWER_GPIO_EN, GPIO_MODE_OUTPUT );
     gpio_set_direction( MOTOR_DRIVER_GPIO_nFAULT, GPIO_MODE_INPUT );
@@ -49,10 +54,13 @@ void MOTOR_init ( void )
 }
 
 /*
- * ENABLE MOTOR DRIVER FUNCTIONALITY
+ * Enable Motor Driver Functionality
  */
 void MOTOR_enable ( void )
 {
+	// LOG
+   	ESP_LOGI(TAG, "Enable Motor Driver");
+
 	// ENABLE POWER SUPPLY AND MOTOR DRIVER
 	gpio_set_level( MOTOR_POWER_GPIO_EN,   true );
     gpio_set_level( MOTOR_DRIVER_GPIO_EN, false );
@@ -63,10 +71,13 @@ void MOTOR_enable ( void )
 }
 
 /*
- * DISABLE MOTOR DRIVER FUNCTIONALITY
+ * Disble Motor Driver Functionality
  */
 void MOTOR_disable ( void )
 {
+	// LOG
+   	ESP_LOGI(TAG, "Disable Motor Driver");
+
 	// DISABLE POWER SUPPLY AND MOTOR DRIVER
 	gpio_set_level( MOTOR_POWER_GPIO_EN,   false );
     gpio_set_level( MOTOR_DRIVER_GPIO_EN, true );
@@ -77,26 +88,31 @@ void MOTOR_disable ( void )
 }
 
 /*
- * READ THE FAULT PIN ON THE MOTOR DRIVER
+ * Read The Fult Pin On The Motor Driver
+ *
  * Returns:	True - Fault Present
  * 			False - No Fault
  */
 bool MOTOR_getFault ( void )
 {
-	return !gpio_get_level( MOTOR_DRIVER_GPIO_nFAULT );
+	bool retVal = !gpio_get_level( MOTOR_DRIVER_GPIO_nFAULT );
+   	ESP_LOGI(TAG, "Motor Driver Fault Status Requested: %d", retVal);
+	return retVal;
 }
 
 /*
- * SETS THE DIRECTION OF THE STEPPER MOTOR
- * DIRECTION WILL MAINTAIN UNTIL POWER CYCLE 
+ * Sets The Direction Of the Stepper Motor
+ *
+ * Direction Will Maintain Until Power Cycle 
  */
 void MOTOR_setDir ( bool dir )
 {
+   	ESP_LOGI(TAG, "Motor Driver Direction Set: %d", dir);
 	gpio_set_level( MOTOR_DRIVER_GPIO_DIR, dir );
 }
 
 /*
- * STEP THE MOTOR ONE STEP IN THE DIRECTION SET BY MOTOR_setDir()
+ * Step The Motor One Step In The Direction Set By MOTOR_setDir()
  */
 void MOTOR_step ( void )
 {
@@ -121,6 +137,7 @@ void MOTOR_stepX ( bool dir, uint16_t steps )
 	MOTOR_setDir( dir );
 
 	// STEP THE MOTOR DEFINED STEPS
+   	ESP_LOGI(TAG, "Move Motor %d Step", steps);
 	while ( steps > 0 ) {
 		MOTOR_step();
 		steps -= 1;

@@ -20,6 +20,7 @@ extern "C" {
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
 
+#include "esp_log.h"
 #include "driver/ledc.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

@@ -47,13 +47,8 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void INSRATE_start              ( void );
 void INSRATE_readAndStoreData   ( const char * );
-
-// void task_INSRATE_retreiveData  ( void * );
-void task_INSRATE_giveInsulin   ( void * );
-void task_INSRATE_beginLowPower ( void * );
-void task_INSRATE_deliverBolus  ( void * );
-void task_INSRATE_rewindPlunger ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

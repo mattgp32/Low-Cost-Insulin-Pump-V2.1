@@ -6,6 +6,8 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define TAG                 "BUZZER"
+
 #define LEDC_TIMER          LEDC_TIMER_0
 #define LEDC_MODE           LEDC_LOW_SPEED_MODE
 #define LEDC_OUTPUT_IO      GPIO_NUM_21
@@ -32,11 +34,14 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * INITIALISE APPROPRIATE INFO FOR BUZZER MODULE FUNCTIONALITY 
+ * Initialise Everything For Buzzer Module Functionality 
  */
 void BUZZER_init ( void )
 {
-   // INITIALISE PWM TIMER CONFIG
+    // LOG 
+    ESP_LOGI(TAG, "Initialising Buzzer Module");
+
+    // INITIALISE PWM TIMER CONFIG
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = LEDC_MODE,
         .timer_num        = LEDC_TIMER,
@@ -58,18 +63,20 @@ void BUZZER_init ( void )
 }
 
 /*
- * SET TIMER DUTY CYCLE TO SWITCH BUZZER ON
+ * Set Timer Duty Cycle To Switch Buzzer ON
  */
 void BUZZER_setDuty ( void )
 {
+    ESP_LOGI(TAG, "Start Buzzer");
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY50);
 }
 
 /*
- * RESET TIMER DUTY CYCLE TO SWITCH BUZZER OFF
+ * Reset Timer Duty Cycle To Switch Buzzer OFF
  */
 void BUZZER_resetDuty ( void )
 {
+    ESP_LOGI(TAG, "Stop Buzzer");
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTYOFF);
 }
 

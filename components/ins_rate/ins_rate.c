@@ -42,6 +42,12 @@ int  INSRATE_truncateAndCheck           ( int );
 bool INSRATE_checkBolusCancelled        ( void );
 int  INSRATE_calculateDeliveryFrequency ( void );
 
+// void task_INSRATE_retreiveData  ( void * );
+void task_INSRATE_giveInsulin   ( void * );
+void task_INSRATE_beginLowPower ( void * );
+void task_INSRATE_deliverBolus  ( void * );
+void task_INSRATE_rewindPlunger ( void * );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -53,7 +59,7 @@ time_t unix_modifier = 0;
 struct tm * timeinfo;
 long long int t_current = 0;
 long long int t_prev = 0;
-QueueHandle_t bolus_delivery_queue;
+// QueueHandle_t bolus_delivery_queue;
 SemaphoreHandle_t basal_semaphore = NULL;
 
 esp_sleep_wakeup_cause_t wake_cause;
@@ -70,7 +76,17 @@ extern bool disable_BT;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * TAKE IN, PROCESS, AND SAVE NEW DATA
+ * Start the RTOS Insulin Rate Tasks
+ */
+void INSRATE_start ( void )
+{
+    xTaskCreate(task_INSRATE_giveInsulin, "start insulin deliveries", 4096, NULL, 21, NULL);
+    xTaskCreate(task_INSRATE_deliverBolus, "give bolus", 4092, NULL, 20, NULL);
+    xTaskCreate(task_INSRATE_rewindPlunger, "rewind motor if flag set", 4092, NULL, 4, NULL);
+}
+
+/*
+ * Take-In Process And Save New Data
  */
 void INSRATE_readAndStoreData ( const char *data )
 {
@@ -163,47 +179,6 @@ void INSRATE_readAndStoreData ( const char *data )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* RTOS FUNCTIONS                                       */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-// /*
-//  * Just used for checking if nvs and BT was working, not used in final version
-//  */
-// void task_INSRATE_retreiveData ( void *arg )
-// {
-//     while (1)
-//     {
-//         // INITIALISE LOOP VARIABLES
-//         int32_t basal_rate = 0;
-//         int32_t bolus_size = 0;
-//         long long int elapsed_time;
-//         nvs_handle_t br_handle;
-//         nvs_handle_t bo_handle;
-        
-//         // TIME STUFF ----------------------------------------------------- VERIFY
-//         setenv("TZ", "UTC-12", 1);
-//         tzset();
-//         actual_time = time(&esp_time) + unix_modifier;
-//         timeinfo = localtime(&actual_time);
-//         t_prev = t_current;
-//         t_current = esp_timer_get_time();
-//         elapsed_time = t_current - t_prev;
-//         printf ("Current local time and date: %s", asctime(timeinfo));
-//         printf("Elapsed time is %lld\n", elapsed_time/1000000);
-
-//         // INITIALISE PARTITION AND READ BASAL AND BOLUS DATA
-//         nvs_flash_init_partition("rate_storage");
-//         nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &br_handle);
-//         nvs_open_from_partition("rate_storage", "bolus_size", NVS_READONLY, &bo_handle);
-//         nvs_get_i32(br_handle, "basal_rate", &basal_rate);
-//         nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
-
-//         // DISPLAY INSULIN DATA
-//         printf("Current basal rate is %ld\n", basal_rate);
-//         printf("Current bolus amount is %ld\n", bolus_size);
-
-//         // LOOP PACING
-//         vTaskDelay(pdMS_TO_TICKS(10000));
-//     }
-// }
 
 /*
  * UPDATE DELIVERY FREQUENCY VALUE FROM NVS DATA
@@ -478,14 +453,6 @@ int INSRATE_truncateAndCheck ( int rate )
     // RETURN
     return rate;
 }
-
-// /*
-//  * Description
-//  */
-// int INSRATE_setDeliveryFrequencyTest ( int freq )
-// {
-//     return freq;
-// }
 
 /*
  * Function to slice a string and find the index of two asterisks contained within it

@@ -6,6 +6,8 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define TAG             "LED"
+
 #define GPIO_LED1       GPIO_NUM_1
 #define GPIO_LED2       GPIO_NUM_2
 #define GPIO_LED3       GPIO_NUM_42
@@ -37,6 +39,8 @@ void LED_patternVoltageLow    ( void );
 void LED_patternBluetoothON   ( void );
 void LED_patternNormal        ( void );
 
+void task_LED_handler         ( void * );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -46,25 +50,40 @@ void LED_patternNormal        ( void );
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * INITIALISE APPROPRIATE INFO FOR LED MODULE FUNCTIONALITY 
+ * Initialises Everything For LED Module Functionality 
  */
 void LED_init ( void )
 {
+   // LOG
+   ESP_LOGI(TAG, "Initialising LED Module");
+   
+   // ?
    gpio_reset_pin(GPIO_LED3); // ------------------------------------------ WHY ARE YOU RESETTING?
 
+   // INITIALISE LED GPIO
    gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
-
+   
+   // ENSURE ALL LED START OFF 
    LED_off(GPIO_LED1);
    LED_off(GPIO_LED2);
    LED_off(GPIO_LED3);
 
+   // PERFORM LED WAVE TO INDICATE STARTUP
    LED_wave();
 }
 
 /*
- * PERFORM LED WAVE
+ * Starts The RTOS LED Handler Task 
+ */
+void LED_start ( void )
+{
+   xTaskCreate(task_LED_handler, "Handles LED Functionality", (2*1024), NULL, 15, NULL);
+}
+
+/*
+ * Perform LED Wave Pattern
  */
 void LED_wave ( void )
 {
@@ -86,12 +105,16 @@ void LED_wave ( void )
 }
 
 /*
- * FLASH LED2 FIVE TIMES
+ * Flash LED1 Five Times
  */
 void LED_flashFive_single ( void )
 {
+   // PREPARE LEDS
    LED_off( GPIO_LED1 );
+   LED_off( GPIO_LED2 );
+   LED_off( GPIO_LED3 );
 
+   // FLASH LEDS
    for( int i = 0; i < 5; i++ )
    {
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
@@ -102,13 +125,16 @@ void LED_flashFive_single ( void )
 }
 
 /*
- * FLASH LED1 AND LED2 FIVE TIMES
+ * Flash LED1 and LED2 Five Times
  */
 void LED_flashFive_double ( void )
 {
+   // PREPARE LEDS
    LED_off( GPIO_LED1 );
    LED_off( GPIO_LED2 );
+   LED_off( GPIO_LED3 );
 
+   // FLASH LEDS
    for(int i = 0; i < 5; i++)
    {
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
@@ -121,14 +147,16 @@ void LED_flashFive_double ( void )
 }
 
 /*
- * FLASH LED1 AND LED2 FIVE TIMES
+ * Flash LED1, LED2, and LED3 Five Times
  */
 void LED_flashFive_triple ( void )
 {
+   // PREPARE LEDS
    LED_off( GPIO_LED1 );
    LED_off( GPIO_LED2 );
    LED_off( GPIO_LED3 );
 
+   // FLASH LEDS
    for(int i = 0; i < 5; i++)
    {
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
@@ -147,10 +175,13 @@ void LED_flashFive_triple ( void )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- *
+ * RTOS Task That Handles LED Behaviour Based on Other Module Status
  */
 void task_LED_handler ( void *args )
 {
+   // LOG
+   ESP_LOGI(TAG, "Starting LED Handler Task");
+
    // INITIALISE FUNCTION VARIABLES
    int32_t basal_rate = 0;
    nvs_handle_t br_handle;     
@@ -165,29 +196,33 @@ void task_LED_handler ( void *args )
    while (1)
    {
       // CHECK AND RETRIEVE BATTERY VOLTAGE MEASUREMENT IN QUEUE
-      if ( uxQueueMessagesWaiting(battLevelQueue) > 0 ) {
-         xQueueReceive( battLevelQueue, pBattLevel, 10 );
-      }
+      // if ( uxQueueMessagesWaiting(battLevelQueue) > 0 ) {
+      //    xQueueReceive( battLevelQueue, pBattLevel, 10 );
+      // }
 
       // RETRIEVE CURRENT BASAL RATE FROM STORAGE
       nvs_get_i32(br_handle, "basal_rate", &basal_rate);
 
       // IS BASAL RATE LOW
       if( basal_rate == 0 ) {
+         ESP_LOGI(TAG, "Pattern: No Basal Rate Detected");
          LED_patternNoBasal();
          vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
-      // // IS BATTERY IS LOW
+      // IS BATTERY IS LOW
       // else if ( battlevel < BATT_MED ) {
+      //    ESP_LOGI(TAG, "Pattern: Low Battery Voltage");
       //    LED_patternVoltageLow();
       //    vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
       // }
       // IS BLUETOOTH IS ON
       else if ( BT_isON() ) {
+         ESP_LOGI(TAG, "Pattern: Bluetooth ON");
          LED_patternBluetoothON();
       }
       // NORMAL OPERATION
       else {
+         ESP_LOGI(TAG, "Pattern: Normal Operation");
          LED_patternNormal();
          vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
@@ -199,7 +234,7 @@ void task_LED_handler ( void *args )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * TURN THE PROVIDED LED GPIO ON 
+ * Turn the Provided LED GPIO ON 
  */
 void LED_on ( int LED )
 {
@@ -207,7 +242,7 @@ void LED_on ( int LED )
 }
 
 /*
- * TURN THE PROVIDED LED GPIO OFF
+ * Turn The Provided LED GPIO OFF
  */
 void LED_off ( int LED )
 {
@@ -215,7 +250,7 @@ void LED_off ( int LED )
 }
 
 /*
- *
+ * LED Pattern When No Basal Rate Is Detected
  */
 void LED_patternNoBasal ( void )
 {
@@ -223,7 +258,7 @@ void LED_patternNoBasal ( void )
 }
 
 /*
- *
+ * LED Pattern When Battery Voltage Is Low
  */
 void LED_patternVoltageLow ( void )
 {
@@ -233,7 +268,7 @@ void LED_patternVoltageLow ( void )
 }
 
 /*
- *
+ * LED Pattern When Bluetooth Is Running
  */
 void LED_patternBluetoothON ( void )
 {
@@ -244,7 +279,7 @@ void LED_patternBluetoothON ( void )
 }
 
 /*
- *
+ * LED Pattern During Normal Operation
  */
 void LED_patternNormal ( void )
 {

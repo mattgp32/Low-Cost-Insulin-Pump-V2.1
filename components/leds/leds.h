@@ -14,7 +14,6 @@ extern "C" {
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h" 
 #include "freertos/timers.h"
@@ -44,12 +43,11 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void LED_init               ( void );
+void LED_start              ( void );
 void LED_wave               ( void );
 void LED_flashFive          ( void );
 void LED_flashFive_double   ( void );
 void LED_flashFive_triple   ( void );
-
-void task_LED_handler       ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

@@ -6,9 +6,10 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define ESP_INTR_FLAG_DEFAULT   0
-
+#define TAG                     "BUTTON"
 #define BUTTON_GPIO             GPIO_NUM_5
+
+#define ESP_INTR_FLAG_DEFAULT   0
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -18,7 +19,9 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BUTTON_pressedISR ( void * );
+void task_BUTTON_handler    ( void * );
+
+void BUTTON_pressedISR      ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
@@ -32,10 +35,13 @@ bool button_pressedFlag = false;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * INITIALISE APPROPRIATE INFO FOR BUTTON MODULE FUNCTIONALITY 
+ * Initialise Everything For Button Module Functionality 
  */
 void BUTTON_init ( void )
 {
+    // LOG
+    ESP_LOGI(TAG, "Initialising Button Module");
+
     // INITIALISE BUTTON GPIO
     gpio_reset_pin( BUTTON_GPIO );
     gpio_set_direction( BUTTON_GPIO, GPIO_MODE_INPUT );
@@ -49,18 +55,30 @@ void BUTTON_init ( void )
 }
 
 /*
- *
+ * Start The RTOS Button Handler Task
+ */
+void BUTTON_start ( void )
+{
+    xTaskCreate(task_BUTTON_handler,"print num", 4092, NULL, 4, NULL);
+}
+
+/*
+ * Returns The Button Pressed Flag 
+ * 
+ * Has the Button Been Pressed And Passed Debouncing Criteria
  */
 bool BUTTON_getPressedFlag ( void )
 {
+    ESP_LOGI(TAG, "Button Pressed Flag Requested");
     return button_pressedFlag;
 }
 
 /*
- *
+ * Resets The Button Pressed Flag
  */
 void BUTTON_resetPressedFlag ( void )
 {
+    ESP_LOGI(TAG, "Button Pressed Flag Reset");
     button_pressedFlag = false;
 }
 
@@ -69,22 +87,25 @@ void BUTTON_resetPressedFlag ( void )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * RTOS TASK TO DEBOUNCE BUTTON AND HANDLE ASSOCIATED LOGIC
+ * RTOS Task To Debounce The Button And Handle Associated Logic
  */
 void task_BUTTON_handler ( void *args )
 {
+    // LOG
+    ESP_LOGI(TAG, "Initialising LED Module");
+    
     // LOOP TO INFINITY AND BEYOND
     while(1)
     {
         // INITIALISE LOOP VARIABLES 
         uint8_t butt_read = 0;
 
-        // SERVICE JSON PUT
-        puts("Print_num begin"); // ------------------------------------ why are we doing a put request
-
         // CHECK FOR A REGISTERED BUTTON PRESS 
         if ( button_pressed )
         {
+            // LOG
+            ESP_LOGI(TAG, "Button Press Event Detected");
+            
             // CHECK IF BUTTON IS DEPRESSED 10 TIMES INCREMENT COUNTER
             for ( int i = 0; i < 10; i++ ) {
                 if( gpio_get_level(BUTTON_GPIO) == true ) {
@@ -95,19 +116,17 @@ void task_BUTTON_handler ( void *args )
             }
             // I
             if ( butt_read > 5 ) {
-                //puts("Button Pressed");
+                ESP_LOGI(TAG, "Button Event Passed Debounce Test");
+                ESP_LOGI(TAG, "Escalating Button Event To Global Flag");
                 button_pressedFlag = true;
             }
-        }
 
-        // RESET BUTTON FLAGS
-        button_pressed = false;
+            // RESET BUTTON FLAGS
+            button_pressed = false;
+        }
 
         // DELAY?
         vTaskDelay(pdMS_TO_TICKS(200)); //------------------------------------ is this loop pacing
-        
-        // SERVICE JSON PUT
-        puts("Print_num end"); // ------------------------------------ why are we doing a put request
     } 
 }
 
@@ -124,7 +143,7 @@ void task_BUTTON_handler ( void *args )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Description
+ * ISR When The Bluetooth Button Is Pressed
  */
 void IRAM_ATTR BUTTON_pressedISR ( void *args )
 {

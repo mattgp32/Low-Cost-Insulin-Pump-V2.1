@@ -47,16 +47,10 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BT_init ( void );
-bool BT_isON ( void );
-
-void task_BT_handler ( void * );
-
-// void task_BT_off ( void * );
-// void task_BT_printTransmission ( void * );
-// void task_BT_receiveData ( void * );
-// void task_BT_processData ( void * );
-// void task_BT_handler ( void * );
+void BT_init    ( void );
+void BT_start   ( void );
+void BT_disable ( void );
+bool BT_isON    ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

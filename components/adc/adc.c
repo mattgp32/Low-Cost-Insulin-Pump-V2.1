@@ -6,6 +6,8 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define TAG                     "ADC"
+
 #define ADC_GPIO_POTIN          GPIO_NUM_4
 #define ADC_GPIO_POTOUT         GPIO_NUM_35
 #define ADC_POT_CHANNEL         ADC_CHANNEL_3
@@ -48,30 +50,36 @@ adc_oneshot_chan_cfg_t config = {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * INITIALISE APPROPRIATE INFO FOR ADC MODULE FUNCTIONALITY 
+ * Initialise Everything For ADC Module Functionality 
  */
 void ADC_init ( void )
 {
+    // LOG
+    ESP_LOGI(TAG, "Initialising ADC Module");
+
     // INITIALISE POT ADC CHANNEL
     adc_oneshot_new_unit( &pot_read_adc_config, &pot_read_adc_handle );
     adc_oneshot_config_channel( pot_read_adc_handle, ADC_POT_CHANNEL, &config );
 }
 
 /*
- * READ SYRINGE POT VALUES
+ * Read Stringe Potentiometer Values
  */
 void ADC_updatePot ( void )
 {
+    // LOG
+    ESP_LOGI(TAG, "Update Potentiometer Value");
+
     // INITIALISE FUNCTION VARIABLES
     int adc_raw_value = 0;
     int potsumtot = 0;
     
     // SETUP GPIO PINS
     gpio_set_direction( ADC_GPIO_POTIN, GPIO_MODE_INPUT );
-    gpio_pullup_dis(    ADC_GPIO_POTIN );
-    gpio_pulldown_dis(  ADC_GPIO_POTIN );
+    gpio_pullup_dis( ADC_GPIO_POTIN );
+    gpio_pulldown_dis( ADC_GPIO_POTIN );
     gpio_set_direction( ADC_GPIO_POTOUT, GPIO_MODE_OUTPUT );
-    gpio_set_level(     ADC_GPIO_POTOUT, true );
+    gpio_set_level( ADC_GPIO_POTOUT, true );
 
     // DELAY TO ALLOW VOLTAGE TO STABILISE
     vTaskDelay( pdMS_TO_TICKS(1000) );
@@ -89,49 +97,52 @@ void ADC_updatePot ( void )
     pot_read_global = ( potsumtot / ADC_POT_NUMREAD );
 
     // DISPLAY POT VOLTAGE
-    printf( "Pot read = %d\n", pot_read_global );
+    ESP_LOGI(TAG, "Pot Read = %d", pot_read_global);
     
     // RESET GPIO PIN TO SAVE POWER
     gpio_set_level( ADC_GPIO_POTOUT, false );
 }
 
 /*
- *
+ * Returns The Potentiometer Position 
  */
 int ADC_getPotPosition ( void )
 {
+    ESP_LOGI(TAG, "Potentiometer Position Requested");
     return pot_read_global;
 }
 
+// /*
+//  * THIS PRINT WAS JUST TO CHECK THE FUNCTION WORKS DURING DEVELOPMENT... AND IT DOES.
+//  * IF YOU WANT TO PUT IT BACK IN, MAKE SURE YOU INCREASE THE RTOS STACK SIZE OR THE FUNCTION WILL CRASH
+//  */
+// void ADC_printBattLevel ( void )
+// {
+//     // INITIALISE FUNCTION VARIABLES
+//     int* pBattLevel;
+//     int battlevel;
+//     pBattLevel = &battlevel;
 
-/*
- * THIS PRINT WAS JUST TO CHECK THE FUNCTION WORKS DURING DEVELOPMENT... AND IT DOES.
- * IF YOU WANT TO PUT IT BACK IN, MAKE SURE YOU INCREASE THE RTOS STACK SIZE OR THE FUNCTION WILL CRASH
- */
-void ADC_printBattLevel ( void )
-{
-    // INITIALISE FUNCTION VARIABLES
-    int* pBattLevel;
-    int battlevel;
-    pBattLevel = &battlevel;
+//     // RECEIVE BATTERY LEVEL INFO FROM QUEUE AND PRINT
+//     xQueueReceive( battLevelQueue, pBattLevel, 10 );
+//     ESP_LOGI(TAG, "Current Battery Level = %d mV", battlevel);
 
-    // RECEIVE BATTERY LEVEL INFO FROM QUEUE AND PRINT
-    xQueueReceive( battLevelQueue, pBattLevel, 10 );
-    printf( "Current battery level is %d mV", battlevel ); 
-
-    // DELAY TO ALLOW PRINT
-    vTaskDelay( 10000/portTICK_PERIOD_MS );
-}
+//     // DELAY TO ALLOW PRINT
+//     vTaskDelay( 10000/portTICK_PERIOD_MS );
+// }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* RTOS FUNCTIONS                                       */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * RTOS TASK TO READ BATTERY VOLTAGE
+ * RTOS Task To Read Battery Voltage
  */
 void task_ADC_getBattLevel ( void* arg )
 {
+    // LOG
+    ESP_LOGI(TAG, "Starting Battery Level Task");
+
     // LOOP TO INFINITY AND BEYOND
     while (1)
     {
