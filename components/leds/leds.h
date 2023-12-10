@@ -42,12 +42,12 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void LED_init           ( void );
-void LED_on             ( int );
-void LED_off            ( int );
-void LED_flashFive      ( void );
-void LED_flashDouble    ( void );
-void LED_wave           ( void );
+void LED_init               ( void );
+void LED_on                 ( int );
+void LED_off                ( int );
+void LED_flashFive          ( void );
+void LED_flashFive_double   ( void );
+void LED_wave               ( void );
 
 void task_LED_displayBattLevel      ( void * );
 void task_LED_noBasilWarning        ( void * );

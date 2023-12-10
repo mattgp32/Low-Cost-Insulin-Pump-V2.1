@@ -34,9 +34,9 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BUZZER_init            ( void );
-
-void task_BUZZER_annoying   ( void * );
+void BUZZER_init        ( void );
+void BUZZER_setDuty     ( void );
+void BUZZER_resetDuty   ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

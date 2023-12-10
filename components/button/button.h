@@ -26,8 +26,6 @@ extern "C" {
 /* PUBLIC DEFINITIONS                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define BUTTON_PIN  GPIO_NUM_5
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC TYPES                                         */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -38,7 +36,7 @@ extern "C" {
 
 void BUTTON_init ( void );
 
-void task_BUTTON_printNum ( void * );
+void task_BUTTON_handler ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

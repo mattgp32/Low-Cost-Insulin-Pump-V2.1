@@ -6,16 +6,13 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-#define nFAULT 				GPIO_NUM_14
-#define DIR 				GPIO_NUM_11
-#define STEP 				GPIO_NUM_12
-#define BOOST_EN 			GPIO_NUM_45
-#define MOTOR_DRIVER_ENABLE	GPIO_NUM_13
-#define nSLEEP 				GPIO_NUM_10
+#define MOTOR_DRIVER_GPIO_DIR 		GPIO_NUM_11
+#define MOTOR_DRIVER_GPIO_STEP 		GPIO_NUM_12
+#define MOTOR_DRIVER_GPIO_EN		GPIO_NUM_13
+#define MOTOR_DRIVER_GPIO_nSLEEP	GPIO_NUM_10
+#define MOTOR_DRIVER_GPIO_nFAULT	GPIO_NUM_14
 
-#define FORWARD 			0
-#define BACKWARD 			1
-#define DELAY_TIME 			500
+#define MOTOR_POWER_GPIO_EN 		GPIO_NUM_45
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -36,69 +33,80 @@ uint32_t steps_turned = 0;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Initialise all the pins required to allow the motor to be driven.
+ * INITIALISE APPROPRIATE GPIO FOR MOTOR MODULE FUNCTIONALITY 
  */
 void MOTOR_init ( void )
 {
-    gpio_set_direction(nFAULT, GPIO_MODE_INPUT);
-    gpio_set_direction(DIR, GPIO_MODE_OUTPUT);
-    gpio_set_direction(STEP, GPIO_MODE_OUTPUT);
-    gpio_set_direction(BOOST_EN, GPIO_MODE_OUTPUT);
-    gpio_set_direction(MOTOR_DRIVER_ENABLE, GPIO_MODE_OUTPUT);
-	gpio_set_direction(nSLEEP, GPIO_MODE_OUTPUT);
-    gpio_set_level(MOTOR_DRIVER_ENABLE, true);
+	// INITIALISE POWER SUPPLY AND MOTOR DRIVER GPIO 
+    gpio_set_direction( MOTOR_POWER_GPIO_EN, GPIO_MODE_OUTPUT );
+    gpio_set_direction( MOTOR_DRIVER_GPIO_nFAULT, GPIO_MODE_INPUT );
+    gpio_set_direction( MOTOR_DRIVER_GPIO_DIR, GPIO_MODE_OUTPUT );
+    gpio_set_direction( MOTOR_DRIVER_GPIO_STEP, GPIO_MODE_OUTPUT );
+    gpio_set_direction( MOTOR_DRIVER_GPIO_EN, GPIO_MODE_OUTPUT );
+	gpio_set_direction( MOTOR_DRIVER_GPIO_nSLEEP, GPIO_MODE_OUTPUT );
+
+    gpio_set_level( MOTOR_DRIVER_GPIO_EN, true );
 }
 
 /*
- * Description
+ * ENABLE MOTOR DRIVER FUNCTIONALITY
  */
 void MOTOR_enable ( void )
 {
-	gpio_set_level(BOOST_EN, true);
-    gpio_set_level(MOTOR_DRIVER_ENABLE, false);
-	gpio_set_level(nSLEEP, true);
-	vTaskDelay(200/portTICK_PERIOD_MS);
+	// ENABLE POWER SUPPLY AND MOTOR DRIVER
+	gpio_set_level( MOTOR_POWER_GPIO_EN,   true );
+    gpio_set_level( MOTOR_DRIVER_GPIO_EN, false );
+	gpio_set_level( MOTOR_DRIVER_GPIO_nSLEEP, true );
+
+	// DELAY TO ALLOW POWER SUPPLY TO STABILISE
+	vTaskDelay( 200/portTICK_PERIOD_MS );
 }
 
 /*
- * Enable Motor Driver Functionality
+ * DISABLE MOTOR DRIVER FUNCTIONALITY
  */
 void MOTOR_disable ( void )
 {
-	gpio_set_level(BOOST_EN, false);
-    gpio_set_level(MOTOR_DRIVER_ENABLE, true);
-	gpio_set_level(nSLEEP, false);
-	vTaskDelay(200/portTICK_PERIOD_MS);
+	// DISABLE POWER SUPPLY AND MOTOR DRIVER
+	gpio_set_level( MOTOR_POWER_GPIO_EN,   false );
+    gpio_set_level( MOTOR_DRIVER_GPIO_EN, true );
+	gpio_set_level( MOTOR_DRIVER_GPIO_nSLEEP, false );
+
+	// DELAY TO ALLOW POWER SUPPLY TO CRASH
+	vTaskDelay( 200/portTICK_PERIOD_MS );
 }
 
 /*
- * Read the status of the motor fault pin. Return false if there is a fault with the motor and a true if all is good.
+ * READ THE FAULT PIN ON THE MOTOR DRIVER
+ * Returns:	True - Fault Present
+ * 			False - No Fault
  */
-bool MOTOR_readFaultPin ( void )
+bool MOTOR_getFault ( void )
 {
-	bool fault_pin = gpio_get_level(nFAULT);
-	return fault_pin;
+	return !gpio_get_level( MOTOR_DRIVER_GPIO_nFAULT );
 }
 
 /*
- * Call this function to change the value of the DIR pin on the IC which controls the direction the motor turns.
+ * SETS THE DIRECTION OF THE STEPPER MOTOR
+ * DIRECTION WILL MAINTAIN UNTIL POWER CYCLE 
  */
-void MOTOR_setDir ( bool direction )
+void MOTOR_setDir ( bool dir )
 {
-	gpio_set_level(DIR, direction);
+	gpio_set_level( MOTOR_DRIVER_GPIO_DIR, dir );
 }
 
 /*
- * this function will call MOTOR_stepMotorDir() to set the motor function to turn one MOTOR_PIN_STEP in the MOTOR_PIN_DIRection of the passed variable. If there is a falult with the motor nothing will happen.
- * One MOTOR_PIN_STEP will then be recorded in the MOTOR_PIN_stepsTurned variable to keep track of how much the motor has turned
+ * STEP THE MOTOR ONE STEP IN THE DIRECTION SET BY MOTOR_setDir()
  */
-void MOTOR_step ( bool dir )
+void MOTOR_step ( void )
 {
-	MOTOR_setDir(dir);
-	gpio_set_level(STEP, 1);
+	// PULSE STEP PIN ON MOTOR DRIVER IC
+	gpio_set_level(MOTOR_DRIVER_GPIO_STEP, 1);
 	vTaskDelay(1);
-	gpio_set_level(STEP, 0);
+	gpio_set_level(MOTOR_DRIVER_GPIO_STEP, 0);
 	vTaskDelay(1);
+
+	// INCREMENT COUNTER
 	steps_turned += 1;
 }
 
@@ -107,15 +115,18 @@ void MOTOR_step ( bool dir )
  */
 void MOTOR_stepX ( bool dir, uint16_t steps )
 {
-	// Enable Motor Driver Functionality
+	// ENABLE MOTOR DRIVER FUNCTION
 	MOTOR_enable();
-	// Turn Motor Defined Steps
-	while ( steps > 0 )
-	{
-		MOTOR_step(dir);
+	// UPDATE MOTOR TURN DIRECTION
+	MOTOR_setDir( dir );
+
+	// STEP THE MOTOR DEFINED STEPS
+	while ( steps > 0 ) {
+		MOTOR_step();
 		steps -= 1;
 	}
-	// Disable Motor For Power Saving
+
+	// DISABLE MOTOR FOR POWER SAVING
 	MOTOR_disable();
 }
 

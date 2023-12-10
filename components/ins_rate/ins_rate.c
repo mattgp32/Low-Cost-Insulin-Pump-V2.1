@@ -168,7 +168,7 @@ void INSRATE_writeData_basalRate ( int delivery_amount )
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READWRITE, &br_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        LED_flashDouble();
+        LED_flashFive_double();
     }
     
     // switch (ret)
@@ -347,7 +347,7 @@ void task_INSRATE_beginLowPower ( void *args )
             esp_sleep_enable_timer_wakeup(10*uS_TO_S_FACTOR);
             esp_light_sleep_start();
             //wake_cause = esp_sleep_get_wakeup_cause();
-            LED_flashDouble();
+            LED_flashFive_double();
             
             // if (wake_cause == ESP_SLEEP_WAKEUP_EXT0)
             //     {
@@ -384,7 +384,7 @@ void task_INSRATE_deliverBolus ( void *arg )
             nvs_get_i32(bo_handle, "bolus_size", &bolus_size);
                 if((bolus_size/MIN_DELIVERY_SIZE) == 0){
                     puts("ReQueSteD bOLuS iS ToO SMalL!!!");
-                    LED_flashDouble();
+                    LED_flashFive_double();
                 } else {
                     int n_steps = bolus_size/MIN_BOLUS_DELIVERY_SIZE;
                     printf("Delivering %d doses of 0.05U\n", n_steps);
@@ -454,7 +454,7 @@ void INS_RATE_writeData_bolus ( int delivery_amount )
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        LED_flashDouble();
+        LED_flashFive_double();
     }
      nvs_set_i32(bo_handle, "bolus_size", delivery_amount);
      nvs_commit(bo_handle);
@@ -469,7 +469,7 @@ void INS_RATE_writeData_rewind ( int delivery_amount )
     nvs_open_from_partition("rate_storage", "rewi", NVS_READWRITE, &br_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        LED_flashDouble();
+        LED_flashFive_double();
     }
 
     nvs_set_i32(br_handle, "basal_rate", delivery_amount);
@@ -516,7 +516,7 @@ void INSRATE_writeData_Bolus ( int delivery_amount )
     nvs_open_from_partition("rate_storage", "bolus_size", NVS_READWRITE, &bo_handle);
     delivery_amount = (delivery_amount / 25) * 25; //force answer to a multiple of 0.025U
     if (delivery_amount <= 0){
-        LED_flashDouble();
+        LED_flashFive_double();
     }
      nvs_set_i32(bo_handle, "bolus_size", delivery_amount);
      nvs_commit(bo_handle);

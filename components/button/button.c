@@ -8,6 +8,8 @@
 
 #define ESP_INTR_FLAG_DEFAULT   0
 
+#define BUTTON_GPIO             GPIO_NUM_5
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -16,13 +18,13 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void button_isr  ( void * );
+void BUTTON_pressedISR ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-int button_pressed = 0;
+bool button_pressed = false;
 bool switch_on = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -30,18 +32,20 @@ bool switch_on = false;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Description
+ * INITIALISE APPROPRIATE INFO FOR BUTTON MODULE FUNCTIONALITY 
  */
 void BUTTON_init ( void )
 {
-    gpio_reset_pin(BUTTON_PIN);
-    gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(BUTTON_PIN, GPIO_FLOATING);
+    // INITIALISE BUTTON GPIO
+    gpio_reset_pin( BUTTON_GPIO );
+    gpio_set_direction( BUTTON_GPIO, GPIO_MODE_INPUT );
+    gpio_set_pull_mode( BUTTON_GPIO, GPIO_FLOATING ); // ------------------------------------ SHOULD HAVE A PULL SO DONT GET FALSE TRIGGERS
 
-    gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_ANYEDGE);
-    gpio_intr_enable(BUTTON_PIN);
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    gpio_isr_handler_add(BUTTON_PIN, button_isr, NULL);
+    // SETUP BUTTON INTERRUPT
+    gpio_set_intr_type( BUTTON_GPIO, GPIO_INTR_ANYEDGE );
+    gpio_intr_enable( BUTTON_GPIO );
+    gpio_install_isr_service( ESP_INTR_FLAG_DEFAULT );
+    gpio_isr_handler_add( BUTTON_GPIO, BUTTON_pressedISR, NULL );
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -49,40 +53,45 @@ void BUTTON_init ( void )
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Description
+ * RTOS TASK TO DEBOUNCE BUTTON AND HANDLE ASSOCIATED LOGIC
  */
-void task_BUTTON_printNum ( void *args )
+void task_BUTTON_handler ( void *args )
 {
+    // LOOP TO INFINITY AND BEYOND
     while(1)
     {
-        puts("Print_num begin");
-
+        // INITIALISE LOOP VARIABLES 
         uint8_t butt_read = 0;
 
-        if(button_pressed!= 0)
+        // SERVICE JSON PUT
+        puts("Print_num begin"); // ------------------------------------ why are we doing a put request
+
+        // CHECK FOR A REGISTERED BUTTON PRESS 
+        if ( button_pressed )
         {
-            for (int i = 0; i<10; i++)
-            {
-                if(gpio_get_level(BUTTON_PIN) == true)
-                {
+            // CHECK IF BUTTON IS DEPRESSED 10 TIMES INCREMENT COUNTER
+            for ( int i = 0; i < 10; i++ ) {
+                if( gpio_get_level(BUTTON_GPIO) == true ) {
+                    // INCREMENT COUNTER
                     butt_read++;
-                    vTaskDelay(pdMS_TO_TICKS(10));
+                    vTaskDelay( pdMS_TO_TICKS(10) ); // ------------------------------------ SHOULD THIS NOT BE MOVED DOWN 1 LEVEL TO DELAY ON A FALSE?
                 }
+            }
+            // I
+            if ( butt_read > 5 ) {
+                //puts("Button Pressed");
+                switch_on = true; // ------------------------------------ WHAT RESETS THIS VARIABLE AND WHAT USES IT? 
             }
         }
 
-        if (butt_read > 5)
-        {
-            //puts("Button Pressed");
-            switch_on = true;
-            butt_read = 0;
-            button_pressed = 0;
-        } else {
-            butt_read = 0;
-            button_pressed = 0;
-        }
-    vTaskDelay(pdMS_TO_TICKS(200));
-     puts("Print_num end");
+        // RESET BUTTON FLAGS
+        button_pressed = false;
+
+        // DELAY?
+        vTaskDelay(pdMS_TO_TICKS(200)); //------------------------------------ is this loop pacing
+        
+        // SERVICE JSON PUT
+        puts("Print_num end"); // ------------------------------------ why are we doing a put request
     } 
 }
 
@@ -101,9 +110,9 @@ void task_BUTTON_printNum ( void *args )
 /*
  * Description
  */
-void IRAM_ATTR button_isr(void* args)
+void IRAM_ATTR BUTTON_pressedISR ( void *args )
 {
-    button_pressed += 1;
+    button_pressed = true;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

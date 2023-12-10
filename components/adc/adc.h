@@ -33,16 +33,15 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void ADC_init       ( void );
-void ADC_readpot    ( void );
+void ADC_init               ( void );
+void ADC_readpot            ( void );
+void ADC_printBattLevel     ( void );
 
-void task_ADC_getBattLevel      ( void* arg );
-void task_ADC_printBattLevel    ( void* arg );
+void task_ADC_getBattLevel  ( void* arg );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 #ifdef _cplusplus

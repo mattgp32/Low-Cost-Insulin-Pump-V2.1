@@ -93,7 +93,7 @@ void app_main(void)
     xTaskCreate(task_INSRATE_giveInsulin, "start insulin deliveries", 4096, NULL, 21, NULL);
     xTaskCreate(task_INSRATE_deliverBolus, "give bolus", 4092, NULL, 20, NULL);
     xTaskCreate(task_INSRATE_rewindPlunger, "rewind motor if flag set", 4092, NULL, 4, NULL);
-    xTaskCreate(task_BUTTON_printNum,"print num", 4092, NULL, 4, NULL);
+    xTaskCreate(task_BUTTON_handler,"print num", 4092, NULL, 4, NULL);
     xTaskCreate(task_BT_off, "turn off BT", 4092, NULL, 4, NULL);
     xTaskCreate(task_BT_handler, "BT_Control_Task", 2048, NULL, 10, NULL); //
     xTaskCreate(task_LED_bluetoothRunningAlert, "flash_led_when BT active", 2048, NULL, 15, NULL); //

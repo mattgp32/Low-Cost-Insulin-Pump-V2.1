@@ -10,6 +10,8 @@
 #define GPIO_LED2       GPIO_NUM_2
 #define GPIO_LED3       GPIO_NUM_42
 
+#define LED_HANDLER_DELAY 60000
+
 #define BATT_HIGH       2000
 #define BATT_MED        1900
 #define BATT_LOW        1800
@@ -37,22 +39,23 @@ extern bool BT_already_on;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
- * Description
+ * INITIALISE APPROPRIATE INFO FOR LED MODULE FUNCTIONALITY 
  */
 void LED_init ( void )
 {
-   gpio_reset_pin(GPIO_LED3);
-   // initialise all LEDs and set them to be turned off initially
+   gpio_reset_pin(GPIO_LED3); // ------------------------------------------ WHY ARE YOU RESETTING?
+
    gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED2, GPIO_MODE_OUTPUT);
    gpio_set_direction(GPIO_LED3, GPIO_MODE_OUTPUT);
-   gpio_set_level(GPIO_LED1, false);
-   gpio_set_level(GPIO_LED2, true);
-   gpio_set_level(GPIO_LED3, true);
+
+   LED_off(GPIO_LED1);
+   LED_off(GPIO_LED2);
+   LED_off(GPIO_LED3);
 }
 
 /*
- * Description
+ * TURN THE PROVIDED LED GPIO ON 
  */
 void LED_on ( int LED )
 {
@@ -60,7 +63,7 @@ void LED_on ( int LED )
 }
 
 /*
- * Description
+ * TURN THE PROVIDED LED GPIO OFF
  */
 void LED_off ( int LED )
 {
@@ -68,51 +71,53 @@ void LED_off ( int LED )
 }
 
 /*
- * Description
+ * FLASH LED2 FIVE TIMES
  */
 void LED_flashFive ( void )
 {
-   for(int i = 0; i < 5; i++)
+   for( int i = 0; i < 5; i++ )
    {
-      LED_on(GPIO_LED2);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(GPIO_LED2);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on( GPIO_LED2 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      LED_off( GPIO_LED2 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
    }
 }
 
 /*
- * Description
+ * FLASH LED1 AND LED2 FIVE TIMES
  */
-void LED_flashDouble ( void )
+void LED_flashFive_double ( void )
 {
    for(int i = 0; i < 5; i++)
    {
-      LED_on(GPIO_LED2);
-      LED_on(GPIO_LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(GPIO_LED2);
-      LED_off(GPIO_LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      LED_on( GPIO_LED2 );
+      LED_on( GPIO_LED1 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      LED_off( GPIO_LED2 );
+      LED_off( GPIO_LED1 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
    }
 }
 
 /*
- * Description
+ * PERFORM LED WAVE
  */
 void LED_wave ( void )
 {
-   for (int i = 0; i <4;i++)
+   for ( int i = 0; i < 4; i++ )
    {
-      LED_on(GPIO_LED1);
-      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_on(GPIO_LED2);
-      LED_off(GPIO_LED1);
-       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_on(GPIO_LED3);
-      LED_off(GPIO_LED2);
-       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-      LED_off(GPIO_LED3);
+      LED_on( GPIO_LED1 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      LED_on( GPIO_LED2 );
+
+      LED_off( GPIO_LED1 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      LED_on( GPIO_LED3 );
+
+      LED_off( GPIO_LED2 );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      LED_off( GPIO_LED3 );
    }
 
 }
@@ -126,32 +131,35 @@ void LED_wave ( void )
  */
 void task_LED_displayBattLevel ( void *arg )
 {
-   while(1)
+   // LOOP TO INFINITY AND BEYOND
+   while (1)
    {
+      // INITIALISE LOOP VARIABLES
       int* pBattLevel;
       int battlevel;
       pBattLevel = &battlevel;
 
-      if (uxQueueMessagesWaiting(battLevelQueue)> 0) 
+      // CHECK FOR BATTERY VOLTAGE MEASUREMENT IN QUEUE
+      if ( uxQueueMessagesWaiting(battLevelQueue) > 0 ) 
       {
-         xQueueReceive(battLevelQueue, pBattLevel, 10);
+         // READ IN BATTERY VOLTAGE
+         xQueueReceive( battLevelQueue, pBattLevel, 10 );
 
-         //printf("Batt level read as %d mV\n", battlevel);
-
-         if (battlevel < BATT_MED)
-         {
-            for(int i = 0; i < 3; i++)
+         // CHECK IF VOLTAGE IS BELOW THRESHOLD
+         if ( battlevel < BATT_MED ) {
+            // DO AN LED WAVE TO LET USER KNOW
+            for ( int i = 0; i < 3; i++ )
             {
                LED_wave();
                printf("Batt Low\n");
             }
-             // printf("Batt High\n");
          }
-         vTaskDelay(pdMS_TO_TICKS(60000));
-         // printf("Queue read\n");
+         // DELAY?
+         vTaskDelay( pdMS_TO_TICKS(LED_HANDLER_DELAY) );                   // ````````````````````````````````````````````````````` WHY DELAY?
       }
-      vTaskDelay(pdMS_TO_TICKS(60000));
-      // printf("Queue not read\n");
+
+      // LOOP PACING
+      vTaskDelay( pdMS_TO_TICKS(LED_HANDLER_DELAY) );
    }
 }
 
@@ -171,7 +179,7 @@ void task_LED_noBasilWarning ( void *arg )
 
       if(basal_rate == 0)
       {
-         LED_flashDouble();
+         LED_flashFive_double();
       }
       vTaskDelay(pdMS_TO_TICKS(120000));
       puts("no br warning end");
@@ -230,7 +238,7 @@ void task_LED_pumpIsAlive ( void *args )
          LED_off(GPIO_LED1);
          vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
       } 
-      vTaskDelay(pdMS_TO_TICKS(60000));
+      vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
       puts("pump_is_alive - end");
    }
 }
