@@ -721,9 +721,6 @@ void bt_disable_funcs(void)
 		printf("esp_bt_controller_deinit status=%d\n", status);
 		
     } 
-
-    ESP_ERROR_CHECK(esp_bt_mem_release(ESP_BT_MODE_BLE));
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
 }
 
 void run_BT()
