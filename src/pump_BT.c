@@ -696,7 +696,7 @@ void bt_disable_funcs(void)
 {
     esp_err_t status;
     //puts("turning off LED2");
-    led_off(2);
+    //led_off(2);
 
 
 	status = esp_bluedroid_disable();

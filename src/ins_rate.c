@@ -350,7 +350,7 @@ void give_insulin(void* arg)
              
     //} 
         
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        vTaskDelay(pdMS_TO_TICKS(frequency));
         puts("give_insulin end");
     }
     
@@ -443,9 +443,9 @@ void rewind_plunge(void* arg)
          puts("rewind_plunge begin");
         if(RW_flag == true) {
             turn_x_steps(false, STEPS_PER_UNIT*2);
-            read_pot();
+            
         }
-        //
+        read_pot();
         if(pot_read_global <=0){
             RW_flag = false;
         }
