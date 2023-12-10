@@ -24,7 +24,7 @@
 #include "esp_timer.h"
 #include "adc.h"
 
-#define STEPS_PER_UNIT 740//(altered based on testing)
+#define STEPS_PER_UNIT 770//(altered based on testing)
 #define SECONDS_TO_MS 1000
 #define THREE_MINUTES 180
 #define SECONDS_IN_AN_HOUR 3600

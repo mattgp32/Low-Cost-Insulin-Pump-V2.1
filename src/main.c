@@ -39,7 +39,7 @@ int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
 bool low_power_enable = false;
-long long int timeb4slp = 0;
+long long int timeb4slp;
 
 void IRAM_ATTR button_isr(void* args)
 {
@@ -111,15 +111,15 @@ void take_a_nap(void * args)
         // vTaskSuspend(bolus_delivery);
         timeb4slp = esp_timer_get_time();
         esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, false);
-        esp_sleep_enable_timer_wakeup(0.5*uS_TO_S_FACTOR);
+        esp_sleep_enable_timer_wakeup(8*uS_TO_S_FACTOR);
         
         if(esp_light_sleep_start() == ESP_OK)
         {
             puts("goodnight");
         }
         xTaskCatchUpTicks((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
-        led_double_flash();
-        } vTaskDelay(1000);
+        //led_double_flash();
+        } vTaskDelay(12000);
     } 
 }
 
