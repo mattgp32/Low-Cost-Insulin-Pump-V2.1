@@ -29,21 +29,17 @@
 #include "esp_sleep.h"
 #include "esp_timer.h"
 
-
-
 #define POT_POWER GPIO_NUM_37
 #define BUTTON_PIN GPIO_NUM_5
 #define ESP_INTR_FLAG_DEFAULT 0
 #define uS_TO_S_FACTOR 1000000ULL
-#define uS_TO_TICKHZ_FACTOR 10000
-
+#define uS_TO_TICKHZ_FACTOR 1000
 
 int button_pressed = 0;
 bool BT_already_on = true;
 bool switch_on = false;
 bool low_power_enable = false;
 long long int timeb4slp = 0;
-
 
 void IRAM_ATTR button_isr(void* args)
 {
@@ -106,24 +102,33 @@ void take_a_nap(void * args)
     {
     if(BT_already_on == false)
         {
+        // vTaskSuspend(receive_BT_data);
+        // vTaskSuspend(process_bt_data);
+        // vTaskSuspend(rewind_plunge);
+        // vTaskSuspend(BT_off);
+        // vTaskSuspend(BT_Control_Task);
+        // vTaskSuspend(BT_running_alert);
+        // vTaskSuspend(bolus_delivery);
         timeb4slp = esp_timer_get_time();
-        esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
-        esp_sleep_enable_timer_wakeup(5*uS_TO_S_FACTOR);
-        puts("goodnight");
-        vTaskDelay(500);
-        esp_light_sleep_start();
-        vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, false);
+        esp_sleep_enable_timer_wakeup(0.5*uS_TO_S_FACTOR);
+        
+        if(esp_light_sleep_start() == ESP_OK)
+        {
+            puts("goodnight");
+        }
+        xTaskCatchUpTicks((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
         led_double_flash();
-        } vTaskDelay(200);
+        } vTaskDelay(1000);
     } 
 }
 
 void app_main(void)
 {
 //Initialise system peripherals to be used after freeRTOS starts
-    esp_pm_config_esp32s3_t pm_config = {
+    esp_pm_config_t pm_config = {
             .max_freq_mhz = 80,
-            .min_freq_mhz = 40,
+            .min_freq_mhz = 10,
            .light_sleep_enable = false,
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
@@ -147,7 +152,7 @@ void app_main(void)
     xTaskCreate(receive_BT_data, "get data from bt buffer",8192, NULL, 10, NULL);
     xTaskCreate(process_bt_data, "print data from bt buffer",8192, NULL, 10, NULL);
     //xTaskCreate(retreive_data, "Display rate data - for debugging only", 8192, NULL, 5, NULL);
-    xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 5, NULL);
+    //xTaskCreate(no_br_warning, "flash led if br = 0", 2048, NULL, 3, NULL);
     xTaskCreate(give_insulin, "start insulin deliveries", 4096, NULL, 21, NULL);
     xTaskCreate(bolus_delivery, "give bolus", 4092, NULL, 20, NULL);
     //xTaskCreate(read_pot, "potentimoeter read", 4092, NULL, 5, NULL);
@@ -157,7 +162,7 @@ void app_main(void)
     xTaskCreate(BT_Control_Task, "BT_Control_Task", 2048, NULL, 10, NULL); //
     xTaskCreate(BT_running_alert, "flash_led_when BT active", 2048, NULL, 15, NULL); //
     xTaskCreate(pump_is_alive, "flash leds every minute so user knows pump is not dead", 2048, NULL, 15, NULL); //
-    //xTaskCreate(take_a_nap, "enable low power config after BT is off", 2048, NULL, 1, NULL);
+    xTaskCreate(take_a_nap, "enable low power config after BT is off", 8192, NULL, 10, NULL);
     //xTaskCreate(begin_low_power, "enter sleep mode", 2048 , NULL, 19,NULL);
     //install gpio isr service
 }
