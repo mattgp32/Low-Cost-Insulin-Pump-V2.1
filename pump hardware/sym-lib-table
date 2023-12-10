@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "MCP73831-2ACI_MC")(type "KiCad")(uri "//file/Usersm$/mgp57/Home/Downloads/MCP73831-2ACI_MC/MCP73831-2ACI_MC.kicad_sym")(options "")(descr ""))
+  (lib (name "New_Library")(type "KiCad")(uri "${KIPRJMOD}/New_Library.kicad_sym")(options "")(descr ""))
+)
