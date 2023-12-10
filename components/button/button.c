@@ -25,7 +25,7 @@ void BUTTON_pressedISR ( void * );
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 bool button_pressed = false;
-bool switch_on = false;
+bool button_pressedFlag = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -46,6 +46,22 @@ void BUTTON_init ( void )
     gpio_intr_enable( BUTTON_GPIO );
     gpio_install_isr_service( ESP_INTR_FLAG_DEFAULT );
     gpio_isr_handler_add( BUTTON_GPIO, BUTTON_pressedISR, NULL );
+}
+
+/*
+ *
+ */
+bool BUTTON_getPressedFlag ( void )
+{
+    return button_pressedFlag;
+}
+
+/*
+ *
+ */
+void BUTTON_resetPressedFlag ( void )
+{
+    button_pressedFlag = false;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -80,7 +96,7 @@ void task_BUTTON_handler ( void *args )
             // I
             if ( butt_read > 5 ) {
                 //puts("Button Pressed");
-                switch_on = true; // ------------------------------------ WHAT RESETS THIS VARIABLE AND WHAT USES IT? 
+                button_pressedFlag = true;
             }
         }
 

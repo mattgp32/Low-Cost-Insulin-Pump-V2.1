@@ -29,6 +29,7 @@ extern "C" {
 
 #include "motor.h"
 #include "adc.h"
+#include "pump_BT.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
@@ -43,16 +44,12 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void LED_init               ( void );
-void LED_on                 ( int );
-void LED_off                ( int );
+void LED_wave               ( void );
 void LED_flashFive          ( void );
 void LED_flashFive_double   ( void );
-void LED_wave               ( void );
+void LED_flashFive_triple   ( void );
 
-void task_LED_displayBattLevel      ( void * );
-void task_LED_noBasilWarning        ( void * );
-void task_LED_bluetoothRunningAlert ( void * );
-void task_LED_pumpIsAlive           ( void * );
+void task_LED_handler       ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

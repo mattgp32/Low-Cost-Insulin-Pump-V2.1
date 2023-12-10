@@ -55,6 +55,8 @@ void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+bool bluetooth_ON = true;
+
 int run_count = 0;
 extern QueueHandle_t bolus_delivery_queue;
 
@@ -73,8 +75,7 @@ static esp_attr_value_t gatts_demo_char1_val =
     .attr_value   = char1_str,
 };
 
-extern bool BT_already_on;
-extern bool switch_on;
+// extern bool BT_already_on;
 extern int BT_timeout;
 
 static uint8_t adv_config_done = 0;
@@ -724,22 +725,24 @@ void bt_disable_funcs(void)
 /*
  * Description
  */
-void BT_run ( void )
+void BT_init ( void )
 {
-    // Create a semaphore to enable system to respond when data is ready:
-    data_ready = xSemaphoreCreateBinary();
+    // INITIALISE LOOP VARIABLES
     esp_err_t ret;
 
-    // Initialize NVS.
+    // CREATE DATA READY SEMAPHORE
+    data_ready = xSemaphoreCreateBinary();
+    
+    // INITIALISE NVS PARTITION
     ret = nvs_flash_init();
+    // CHECK FOR FULL NVS CONDITION
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
 
-   //ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
+    // INITIALISE BLUETOOTH CONTROLLER
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret) {
@@ -773,8 +776,7 @@ void BT_run ( void )
         ESP_LOGE(GATTS_TAG, "gap register error, error code = %x", ret);
         return;
     }
-    ret = esp_ble_gatts_app_register(PROFILE_A_APP_ID);
-    if (ret){
+    if ( esp_ble_gatts_app_register(PROFILE_A_APP_ID) ) {
         ESP_LOGE(GATTS_TAG, "gatts app register error, error code = %x", ret);
         return;
     }
@@ -783,11 +785,23 @@ void BT_run ( void )
     //     ESP_LOGE(GATTS_TAG, "gatts app register error, error code = %x", ret);
     //     return;
     // }
+
     esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
     if (local_mtu_ret){
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
         return;
     }
+
+    // TOGGLE BLUETOOTH ON FLAG
+    bluetooth_ON = true;
+}
+
+/*
+ *
+ */
+bool BT_isON ( void )
+{
+    return bluetooth_ON;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -797,86 +811,111 @@ void BT_run ( void )
 /*
  * Description
  */
-void task_BT_off ( void *arg )
-{
-    while(1)
-    {
-        puts("BT_off begin");
-        if((BT_already_on == true) && (switch_on == true)) 
-        {
-            bt_disable_funcs();
-            vTaskDelay(pdMS_TO_TICKS(200));
-            //puts("BT Manual Switch Off");
+// void task_BT_off ( void *arg )
+// {
+//     while(1)
+//     {
+//         puts("BT_off begin");
+//         if( (bluetooth_ON == true) && (BUTTON_getPressedFlag() == true) ) 
+//         {
+//             bt_disable_funcs();
+//             vTaskDelay(pdMS_TO_TICKS(200));
+//             //puts("BT Manual Switch Off");
 
-            switch_on = false;
-            BT_already_on = false;
+//             BUTTON_resetPressedFlag();
+//             bluetooth_ON = false;
         
-        } 
-        else if ((BT_already_on == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
-        {
-            bt_disable_funcs();
-            //puts("BT Timeout Switch Off");
-            BT_already_on = false;
-        } 
-        else 
-        {
-            vTaskDelay(pdMS_TO_TICKS(1000));   
-        }  
-        puts("BT_off end");
-    }    
-}
+//         } 
+//         else if ((bluetooth_ON == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
+//         {
+//             bt_disable_funcs();
+//             //puts("BT Timeout Switch Off");
+//             bluetooth_ON = false;
+//         } 
+//         else 
+//         {
+//             vTaskDelay(pdMS_TO_TICKS(1000));   
+//         }  
+//         puts("BT_off end");
+//     }    
+// }
 
-/*
- * Description
- */
-void task_BT_printTransmission ( void *arg )
-{
-    while(1)
-    {
-        for(int i = 0; (i < 15); i++)
-        {
-            printf("%d ", bt_data[i]);
-        }
-        printf("\n");
-        vTaskDelay(pdMS_TO_TICKS(5000));
-    }
-}
+// /*
+//  * Description
+//  */
+// void task_BT_printTransmission ( void *arg )
+// {
+//     while(1)
+//     {
+//         for(int i = 0; (i < 15); i++)
+//         {
+//             printf("%d ", bt_data[i]);
+//         }
+//         printf("\n");
+//         vTaskDelay(pdMS_TO_TICKS(5000));
+//     }
+// }
 
-/*
- * Description
- */
-void task_BT_receiveData ( void *arg )
-{
-    while(1)
-    {
-        puts("receive_bt_data begin");
-        if (bt_data[15] == 1) 
-        {
-            xSemaphoreGive(data_ready);
-        }
-        vTaskDelay(pdMS_TO_TICKS(200));
-        puts("receive_bt_data end");
-    }
-}
+// /*
+//  * Description
+//  */
+// void task_BT_receiveData ( void *arg )
+// {
+//     while(1)
+//     {
+//         puts("receive_bt_data begin");
 
-/*
- * Description
- */
-void task_BT_processData ( void *arg )
-{
-    while(1)
-    {
-        puts("process_bt_data begin");
-        if(pdPASS == xSemaphoreTake(data_ready, 0)) 
-        {
-            INSRATE_readAndStoreData(bt_data);
-            memset(bt_data, 0, sizeof(bt_data));
-        }
-        vTaskDelay(pdMS_TO_TICKS(200));
-        puts("process_bt_data end");
-    }   
-}
+//         // CHECK FOR DATA IN BLUETOOTH BUFFER
+//         if (bt_data[15] == 1) {
+//             // TOGGLE DATA SEMAPHORE
+//             xSemaphoreGive(data_ready);
+//         }
 
+//         // LOOP PACING
+//         vTaskDelay(pdMS_TO_TICKS(200));
+        
+//         puts("receive_bt_data end");
+//     }
+// }
+
+// /*
+//  * Description
+//  */
+// void task_BT_processData ( void *arg )
+// {
+//     while(1)
+//     {
+//         puts("process_bt_data begin");
+
+//         //
+//         if ( pdPASS == xSemaphoreTake(data_ready, 0)) 
+//         {
+//             INSRATE_readAndStoreData(bt_data);
+//             memset(bt_data, 0, sizeof(bt_data));
+//         }
+//         vTaskDelay(pdMS_TO_TICKS(200));
+//         puts("process_bt_data end");
+//     }   
+// }
+
+// /*
+//  * Description
+//  */
+// void task_BT_handler ( void *arg )
+// {
+//     while(1)
+//     {
+//         puts("BT_control_task - begin (end wont show because restart)");
+//         if( ( bluetooth_ON == false) && (BUTTON_getPressedFlag() == true) )
+//         {
+//             puts("RESTARTING");
+//             esp_restart();
+//         }  
+//         vTaskDelay(pdMS_TO_TICKS(1000));
+//     }
+// }
+
+// ------------------------------------------------------------------------- HOW ABOUT A FUNCTION LIKE THIS?
 /*
  * Description
  */
@@ -884,14 +923,46 @@ void task_BT_handler ( void *arg )
 {
     while(1)
     {
-        puts("BT_control_task - begin (end wont show because restart)");
-        if((BT_already_on == false) && (switch_on == true))
+        // BLUETOOTH IS ON
+        if ( bluetooth_ON )
         {
-            puts("RESTARTING");
-            esp_restart();
-        }  
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+            // MANUAL (USER INITIATED) BT OFF COMMAND 
+            if ( BUTTON_getPressedFlag() ) 
+            {
+                bt_disable_funcs();
+                vTaskDelay(pdMS_TO_TICKS(200));
+                BUTTON_resetPressedFlag();
+                bluetooth_ON = false;
+            }
+            // AUTO BLUETOOTH TIMEOUT
+            else if ( esp_timer_get_time() > 60 * uS_TO_S_FACTOR  ) 
+            {
+                bt_disable_funcs();
+                bluetooth_ON = false;
+            }
+            // CHECK FOR BLUETOOTH DATA
+            else if ( bt_data[15] == 1 ) 
+            {
+                // IMPORT DATA INTO NVS
+                INSRATE_readAndStoreData(bt_data);
+                // RESET BLUETOOTH DATA BUFFER
+                memset(bt_data, 0, sizeof(bt_data));
+            }
+        }
+
+        // BLUETOOTH IS OFF
+        else 
+        {
+            if ( BUTTON_getPressedFlag() ) {
+                puts("RESTARTING");
+                esp_restart();
+            } 
+
+        }
+
+        // LOOP PACING
+        vTaskDelay(pdMS_TO_TICKS(200));  
+    }   
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

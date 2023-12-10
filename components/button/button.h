@@ -34,7 +34,9 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BUTTON_init ( void );
+void BUTTON_init                ( void );
+bool BUTTON_getPressedFlag      ( void );
+void BUTTON_resetPressedFlag    ( void );
 
 void task_BUTTON_handler ( void * );
 

@@ -33,6 +33,7 @@ extern "C" {
 #include "motor.h"
 #include "adc.h"
 #include "leds.h"
+#include "pump_BT.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
@@ -46,14 +47,9 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void INSRATE_readAndStoreData           ( const char * );
-void INSRATE_sliceString                ( const char * );
-void INSRATE_initStoragePartition       ( void );
-void INSRATE_writeData_basalRate        ( int );
-int  INSRATE_setDeliveryFrequencyTest   ( int );
-bool INSRATE_checkBolusCancelled        ( void );
+void INSRATE_readAndStoreData   ( const char * );
 
-void task_INSRATE_retreiveData  ( void * );
+// void task_INSRATE_retreiveData  ( void * );
 void task_INSRATE_giveInsulin   ( void * );
 void task_INSRATE_beginLowPower ( void * );
 void task_INSRATE_deliverBolus  ( void * );

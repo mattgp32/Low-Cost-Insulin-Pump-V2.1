@@ -34,7 +34,8 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void ADC_init               ( void );
-void ADC_readpot            ( void );
+void ADC_updatePot          ( void );
+int  ADC_getPotPosition     ( void );
 void ADC_printBattLevel     ( void );
 
 void task_ADC_getBattLevel  ( void* arg );

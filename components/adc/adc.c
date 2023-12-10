@@ -60,7 +60,7 @@ void ADC_init ( void )
 /*
  * READ SYRINGE POT VALUES
  */
-void ADC_readpot ( void )
+void ADC_updatePot ( void )
 {
     // INITIALISE FUNCTION VARIABLES
     int adc_raw_value = 0;
@@ -94,6 +94,15 @@ void ADC_readpot ( void )
     // RESET GPIO PIN TO SAVE POWER
     gpio_set_level( ADC_GPIO_POTOUT, false );
 }
+
+/*
+ *
+ */
+int ADC_getPotPosition ( void )
+{
+    return pot_read_global;
+}
+
 
 /*
  * THIS PRINT WAS JUST TO CHECK THE FUNCTION WORKS DURING DEVELOPMENT... AND IT DOES.

@@ -33,6 +33,8 @@ extern "C" {
 #include "esp_pm.h"
 #include "sdkconfig.h"
 
+#include "button.h"
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -45,13 +47,16 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BT_run ( void );
+void BT_init ( void );
+bool BT_isON ( void );
 
-void task_BT_off ( void * );
-void task_BT_printTransmission ( void * );
-void task_BT_receiveData ( void * );
-void task_BT_processData ( void * );
 void task_BT_handler ( void * );
+
+// void task_BT_off ( void * );
+// void task_BT_printTransmission ( void * );
+// void task_BT_receiveData ( void * );
+// void task_BT_processData ( void * );
+// void task_BT_handler ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */
