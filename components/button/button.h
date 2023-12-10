@@ -35,7 +35,6 @@ extern "C" {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void BUTTON_init                ( void );
-void BUTTON_start               ( void );
 bool BUTTON_getPressedFlag      ( void );
 void BUTTON_resetPressedFlag    ( void );
 
