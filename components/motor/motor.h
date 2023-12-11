@@ -33,8 +33,6 @@ void MOTOR_init     ( void );
 void MOTOR_enable 	( void );
 void MOTOR_disable 	( void );
 bool MOTOR_getFault ( void );
-void MOTOR_setDir   ( bool );
-void MOTOR_step 	( void );
 void MOTOR_stepX    ( bool, uint16_t );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

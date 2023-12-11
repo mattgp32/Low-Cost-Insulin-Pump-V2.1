@@ -41,7 +41,7 @@ void INSRATE_calculateBasalFrequency    ( void );
 
 void task_INSRATE_deliverBasal          ( void * );
 void task_INSRATE_deliverBolus          ( void * );
-void task_INSRATE_rewindPlunger         ( void * );
+// void task_INSRATE_auxilaryFunctions     ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
@@ -58,11 +58,13 @@ TickType_t  basal_frequency = 0;
 int32_t     bolus_size = 0;
 bool        bolus_new = false;
 
+bool        plunger_Rewind = false;
+int32_t     plunger_prime = 0;
+bool        plunger_primeNew = false;
+
 uint8_t index_arr[2] = {0};
 time_t unix_modifier = 0;
 
-bool bolus_ready = false;
-bool RW_flag = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -100,7 +102,7 @@ void INSRATE_start ( void )
 {
     xTaskCreate(task_INSRATE_deliverBasal, "start insulin deliveries", 4096, NULL, 21, NULL);
     xTaskCreate(task_INSRATE_deliverBolus, "give bolus", 4092, NULL, 20, NULL);
-    // xTaskCreate(task_INSRATE_rewindPlunger, "rewind motor if flag set", 4092, NULL, 4, NULL);
+    // xTaskCreate(task_INSRATE_auxilaryFunctions, "rewind motor if flag set", 4092, NULL, 4, NULL);
 }
 
 /*
@@ -167,10 +169,10 @@ void INSRATE_readAndStoreData ( const char *data )
     // DATATYPE: MOTOR REWIND
     else if ( strcmp(data_type, "RE") == 0 ) 
     {
-        //
+        // LOG REWIND 
         ESP_LOGI(TAG, "Setting Rewind Flag"); 
-        //
-        RW_flag = true;
+        // TOGGLE FLAG TO INITIATE REWIND
+        plunger_Rewind = true;
     } 
 
     // DATATYPE: PRIME STRINGE
@@ -252,7 +254,7 @@ void task_INSRATE_deliverBasal ( void *arg )
             // STEP MOTOR
             MOTOR_stepX( true, (int)(STEPS_PER_UNIT * basal_rate) / (basal_delPerHour*1000) );
             // READ IN SYRING POT POSITION
-            ADC_updatePot(); // ---------------------------------------------------------------------------------------why are you reading pot? you arnt doing anything with it
+            // ADC_updatePot(); // ---------------------------------------------------------------------------------------why are you reading pot? you arnt doing anything with it
             // RELEASE CONTROL OF MOTOR
             motorAvaliable = true;
             // LOOP PACING
@@ -309,7 +311,7 @@ void task_INSRATE_deliverBolus ( void *arg )
                     if ( bolus_new )
                     {
                         // LOG CANCELLATION
-                        ESP_LOGI(TAG, "Bolus Cancelled. Delivered %d / %d Doses", i, n_steps);
+                        ESP_LOGI(TAG, "Bolus Cancelled. Delivered %d / %ld Doses", i, numDoses);
                         // BREAK FROM DELIVERY LOOP
                         break;
                     }
@@ -317,7 +319,7 @@ void task_INSRATE_deliverBolus ( void *arg )
                     else
                     {
                         // LOG DELIVERY
-                        ESP_LOGI(TAG, "Delivering Bolus Dose %d / %d", i+1, numDoses);
+                        ESP_LOGI(TAG, "Delivering Bolus Dose %d / %ld", i+1, numDoses);
                         // DRIVE MOTOR
                         MOTOR_stepX( true, MIN_BOLUS_DELIVERY_STEPS );
                         // WAIT 
@@ -326,7 +328,7 @@ void task_INSRATE_deliverBolus ( void *arg )
                 }
 
                 // CHECK IF NEED A 0.025U DOSE TO MEET TOTAL BOLUS REQUIRMENETS
-                if ( !bolus_new && (bolus_sizeLocal % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) // ------------------------- why not just deliver all doses at 0.025U?
+                if ( !bolus_new && (bolus_sizeLocal % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) 
                 {
                     // LOG DELIVERY
                     ESP_LOGI(TAG, "Delivering additional dose of 0.025U to meet requested bolus size of %ld", bolus_sizeLocal);
@@ -357,34 +359,67 @@ void task_INSRATE_deliverBolus ( void *arg )
 }
 
 // /*
-//  * Description
+//  * Handles Any Auilary Functions That Arnt Delivering Bolus Or Basal
 //  */
-// void task_INSRATE_rewindPlunger ( void *arg )
+// void task_INSRATE_auxilaryFunctions ( void *arg )
 // {
 //     // LOG
-//     ESP_LOGI(TAG, "Starting Rewind Plunger Task");
+//     ESP_LOGI(TAG, "Starting Auxilary Function Task");
 
-//     //
+//     // INITIALISE FUNCTION VARIABLES
+//     uint8_t rewindLoop = 0; 
+
+//     // LOOP TO INFINITY AND BEYOND
 //     while (1)
 //     {
-//         // REWIND FLAG
-//         if ( RW_flag == true ) 
+//         // CHECK FOR PLUNGER REWIND COMMAND
+//         if ( plunger_Rewind ) 
 //         {
-//             // LOG
-//             ESP_LOGI(TAG, "Plunger Rewind Task = True");
+//             // CHECK IF FIRST LOOP OF PLUNDER REWIND
+//             if ( rewindLoop == 0 ) {
+//                 // CHECK IF MOTOR IS BEING USED
+//                 if ( !motorAvaliable ) {
+//                     ESP_LOGI(TAG, "Motor Unavaliable To Rewind, Wait Until Rescource Becomes Avaliable");
+//                     // WAIT FOR MOTOR CONTROL TO BECOME AVALIABLE
+//                     while ( !motorAvaliable ) { vTaskDelay( pdMS_TO_TICKS(10) ); }
+//                 }
+//                 // TAKE CONTROL OF MOTOR 
+//                 motorAvaliable = false;
+//                 // LOG REWIND OF PLUGER
+//                 ESP_LOGI(TAG, "Starting Plunger Rewind Task");
+//             }
+//             // INCREMENT MOTOR MOVE COUNTER
+//             rewindLoop += 1;
+//             // LOG PLUNGER MOVE 
+//             ESP_LOGI(TAG, "Moving Plunger #%d", rewindLoop);
 //             // MOVE PLUNGER BACK
 //             MOTOR_stepX( false, STEPS_PER_UNIT*2 );    
 //             // UPDATE POT POSITION DATA
 //             ADC_updatePot();
 //             // CHECK FOR SYRINGE RESET CONDITION POSITION
 //             if ( ADC_getPotPosition() <= 0 ) {
-//                 ESP_LOGI(TAG, "Plunger Rewind Task = Complete");
-//                 RW_flag = false;
+//                 // LOG COMPLETION OF TASK
+//                 ESP_LOGI(TAG, "Finishing Plunger Rewind Task ");
+//                 // RELEASE MOTOR CONTROL
+//                 motorAvaliable = false;
+//                 // RESET REWIND VARIABLES
+//                 plunger_Rewind = false;
+//                 rewindLoop = 0;
 //             }
 //         }
 
+//         // CHECK FOR PLUNGER PRIME COMMAND
+//         else if ( plunger_primeNew) {
+            
+//             // RELEASE MOTOR CONTROL
+//             motorAvaliable = false;
+//             // RESET PLUNGER PRIME AMOUNT VARIABLE
+//             plunger_prime = 0;
+//             plunger_primeNew = false;
+//         }
+
 //         // LOOP PACING
-//         vTaskDelay(pdMS_TO_TICKS(INSRATE_REWIND_LOOP_DELAY));
+//         vTaskDelay( pdMS_TO_TICKS(INSRATE_REWIND_LOOP_DELAY) );
 //     }
 // }
 

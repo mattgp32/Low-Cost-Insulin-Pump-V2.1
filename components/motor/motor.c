@@ -29,6 +29,9 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void MOTOR_setDir   ( bool );
+void MOTOR_step 	( void );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -94,6 +97,7 @@ void MOTOR_disable ( void )
 	gpio_set_level( MOTOR_DRIVER_GPIO_nSLEEP,	false );
 
 	// DELAY TO ALLOW POWER SUPPLY TO CRASH
+	vTaskDelay( 200/portTICK_PERIOD_MS );
 }
 
 /*

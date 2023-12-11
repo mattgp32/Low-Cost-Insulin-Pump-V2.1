@@ -862,7 +862,7 @@ void task_BT_handler ( void *arg )
         // BLUETOOTH IS OFF
         else 
         {
-
+            // 
             if ( BUTTON_getPressedFlag() ) {
                 ESP_LOGI(TAG, "Restarting");
                 esp_restart();

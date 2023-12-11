@@ -193,7 +193,7 @@ void task_LED_handler ( void *args )
 
    while (1)
    {
-      // CHECK AND RETRIEVE BATTERY VOLTAGE MEASUREMENT IN QUEUE
+      // // CHECK AND RETRIEVE BATTERY VOLTAGE MEASUREMENT IN QUEUE
       // if ( uxQueueMessagesWaiting(battLevelQueue) > 0 ) {
       //    xQueueReceive( battLevelQueue, pBattLevel, 10 );
       // }
@@ -207,7 +207,7 @@ void task_LED_handler ( void *args )
          LED_patternNoBasal();
          vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
-      // IS BATTERY IS LOW
+      // // IS BATTERY IS LOW
       // else if ( battlevel < BATT_MED ) {
       //    ESP_LOGI(TAG, "Pattern: Low Battery Voltage");
       //    LED_patternVoltageLow();
