@@ -8,12 +8,13 @@
 
 #define TAG                     "ADC"
 
-#define ADC_GPIO_POTIN          GPIO_NUM_4
 #define ADC_GPIO_POTOUT         GPIO_NUM_35
+#define ADC_GPIO_POTIN          GPIO_NUM_4
 #define ADC_POT_CHANNEL         ADC_CHANNEL_3
 
 #define ADC_POT_NUMREAD         10
 
+#define ADC_BATT_GPIO           GPIO_NUM_8
 #define ADC_BATT_CHANNEL        ADC_CHANNEL_7
 
 #define ADC_BATT_TASK_LOOPDELAY 180000

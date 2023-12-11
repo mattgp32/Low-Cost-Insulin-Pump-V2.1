@@ -47,6 +47,7 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void INSRATE_init               ( void );
 void INSRATE_start              ( void );
 void INSRATE_readAndStoreData   ( const char * );
 

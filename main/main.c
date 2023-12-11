@@ -33,12 +33,13 @@
 #include "leds.h"
 #include "ins_rate.h"
 #include "pump_BT.h"
-#include "buzzer.h"
 #include "button.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#define TAG                     "SYSTEM"
 
 #define uS_TO_S_FACTOR          1000000ULL
 #define uS_TO_TICKHZ_FACTOR     10000
@@ -53,13 +54,9 @@
 
 void SYSTEM_init ( void );
 
-void task_SYSTEM_napTime ( void * );
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-bool low_power_enable = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -70,53 +67,34 @@ bool low_power_enable = false;
  */
 void app_main(void)
 {
+    //
+    ESP_LOGI(TAG, "Start Initialising Component Modules");
+
     // INITIALISE MODULES
     SYSTEM_init();
-    LED_init();
-    // BUZZER_init();
+    INSRATE_init();
     BT_init();
+    LED_init();
     MOTOR_init();
     ADC_init();
     BUTTON_init();
 
+    //
+    ESP_LOGI(TAG, "Finished Initialising Component Modules");
+    ESP_LOGI(TAG, "Start Booting RTOS Tasks");
+
     // START ALL RTOS TASKS
     BT_start();
     INSRATE_start();
-    BUTTON_start();
     LED_start();
+
+    //
+    ESP_LOGI(TAG, "Finish Booting RTOS Tasks");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* RTOS FUNCTIONS                                       */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-// /*
-//  * Description
-//  */
-// void task_SYSTEM_napTime ( void *args )
-// {
-//     // INIT FUNCTION VARIABLES
-//     static long long int timeb4slp = 0;
-
-//     // LOOP TO INFINITY AND BEYOND
-//     while (1)
-//     {
-//         if ( BT_already_on == false )
-//         {
-//             timeb4slp = esp_timer_get_time();
-//             esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
-//             esp_sleep_enable_timer_wakeup(5*uS_TO_S_FACTOR);
-//             puts("goodnight");
-//             vTaskDelay(500);
-//             esp_light_sleep_start();
-//             vTaskStepTick((esp_timer_get_time() - timeb4slp)/ uS_TO_TICKHZ_FACTOR);
-//             // LED_flashDouble();
-//         } 
-
-//         // LOOP PACING
-//         vTaskDelay(200);
-//     } 
-// }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE FUNCTIONS                                    */
@@ -127,6 +105,9 @@ void app_main(void)
  */
 void SYSTEM_init ( void )
 {
+    // LOG
+    ESP_LOGI(TAG, "Initialise System Function");
+
     // INITIALISE AND APPLY CONFIG FOR POWER MANAGEMENT PERIPHERAL
     esp_pm_config_t pm_config = {
         .max_freq_mhz = 80,

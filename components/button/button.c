@@ -91,17 +91,17 @@ void BUTTON_resetPressedFlag ( void )
 void IRAM_ATTR BUTTON_pressedISR ( void *args )
 {
     // INITIALISE FUNCTION VARIABLES
-    static TickType_t pressed = 0;
+    static TickType_t tick = 0;
     
     // BUTTON PRESSED
     if ( !gpio_get_level(BUTTON_GPIO) ) 
     { 
-        pressed = xTaskGetTickCountFromISR();
+        tick = xTaskGetTickCountFromISR();
     }
     // BUTTON RELEASED
     else
     { 
-        TickType_t time = xTaskGetTickCountFromISR() - pressed;
+        TickType_t time = xTaskGetTickCountFromISR() - tick;
         if ( (time >= 5) && (time <= 100) )
         {
             button_pressed = true;

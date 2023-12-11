@@ -8,6 +8,8 @@
 
 #define TAG                 "BUZZER"
 
+#define BUZZER_GPIO 		GPIO_NUM_21
+
 #define LEDC_TIMER          LEDC_TIMER_0
 #define LEDC_MODE           LEDC_LOW_SPEED_MODE
 #define LEDC_OUTPUT_IO      GPIO_NUM_21

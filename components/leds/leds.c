@@ -8,9 +8,9 @@
 
 #define TAG             "LED"
 
-#define GPIO_LED1       GPIO_NUM_1
+#define GPIO_LED1       GPIO_NUM_42
 #define GPIO_LED2       GPIO_NUM_2
-#define GPIO_LED3       GPIO_NUM_42
+#define GPIO_LED3       GPIO_NUM_1
 
 #define LED_HANDLER_DELAY 60000
 
@@ -56,9 +56,6 @@ void LED_init ( void )
 {
    // LOG
    ESP_LOGI(TAG, "Initialising LED Module");
-   
-   // ?
-   gpio_reset_pin(GPIO_LED3); // ------------------------------------------ WHY ARE YOU RESETTING?
 
    // INITIALISE LED GPIO
    gpio_set_direction(GPIO_LED1, GPIO_MODE_OUTPUT);
@@ -91,14 +88,15 @@ void LED_wave ( void )
    {
       LED_on( GPIO_LED1 );
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
-      LED_on( GPIO_LED2 );
 
       LED_off( GPIO_LED1 );
+      LED_on( GPIO_LED2 );
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
-      LED_on( GPIO_LED3 );
 
       LED_off( GPIO_LED2 );
+      LED_on( GPIO_LED3 );
       vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      
       LED_off( GPIO_LED3 );
    }
 

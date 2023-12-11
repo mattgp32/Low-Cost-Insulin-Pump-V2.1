@@ -10,6 +10,8 @@
 
 #define uS_TO_S_FACTOR 1000000ULL
 
+#define BLUETOOTH_TIMEOUT (60 * uS_TO_S_FACTOR)
+
 #define TEST_DEVICE_NAME            "ULCIP DEVICE A"
 #define TEST_MANUFACTURER_DATA_LEN  25
 
@@ -839,7 +841,7 @@ void task_BT_handler ( void *arg )
                 bluetooth_ON = false;
             }
             // AUTO BLUETOOTH TIMEOUT
-            else if ( esp_timer_get_time() > 60 * uS_TO_S_FACTOR  ) 
+            else if ( esp_timer_get_time() > BLUETOOTH_TIMEOUT ) 
             {
                 ESP_LOGI(TAG, "Bluetooth On Timeout Reached");
                 ESP_LOGI(TAG, "Bluetooth Turning OFF");
@@ -860,6 +862,7 @@ void task_BT_handler ( void *arg )
         // BLUETOOTH IS OFF
         else 
         {
+
             if ( BUTTON_getPressedFlag() ) {
                 ESP_LOGI(TAG, "Restarting");
                 esp_restart();
