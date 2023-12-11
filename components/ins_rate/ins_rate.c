@@ -325,7 +325,7 @@ void task_INSRATE_deliverBolus ( void *arg )
                     }
                 }
 
-                // 
+                // CHECK IF NEED A 0.025U DOSE TO MEET TOTAL BOLUS REQUIRMENETS
                 if ( !bolus_new && (bolus_sizeLocal % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) // ------------------------- why not just deliver all doses at 0.025U?
                 {
                     // LOG DELIVERY
@@ -336,10 +336,9 @@ void task_INSRATE_deliverBolus ( void *arg )
 
                 // LOG COMPLETION OF BOLUS
                 if ( bolus_new && bolus_size == 0 ) {
-                    ESP_LOGI(TAG, "Bolus Value Updated - Starting Bolus Delivery");
-                } else if () {
-                    ESP_LOGI(TAG, "Bolus Value Updated - Starting Bolus Delivery");
-
+                    ESP_LOGI(TAG, "Bolus Cancelled ");
+                } else if ( bolus_new ) {
+                    ESP_LOGI(TAG, "Bolus Value Updated - Restarting Bolus Delivery");
                 } else {
                     ESP_LOGI(TAG, "Finishing Bolus Delivery");
                 }
