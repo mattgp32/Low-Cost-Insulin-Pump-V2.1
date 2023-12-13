@@ -13,6 +13,8 @@
 /* PRIVATE DEFINITIONS                                  */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+#define TAG "LOGGING"
+
 #define EPNUM_MSC       1
 #define TUSB_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
 
