@@ -86,6 +86,7 @@ void app_main(void)
     LED_start();
     INSRATE_start();
     SLEEP_start();
+    
     //
     ESP_LOGI(TAG, "Finish Booting RTOS Tasks");
 }

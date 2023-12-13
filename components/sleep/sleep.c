@@ -21,24 +21,30 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-void task_SLEEP_startLightSleep     (void *);
+
+void task_SLEEP_startLightSleep ( void * );
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 long long int timeBeforeSleep;
 long long int timeSpentAsleep;
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-void SLEEP_start    ( void )
+
+void SLEEP_start ( void )
 {
     xTaskCreate(task_SLEEP_startLightSleep, "Let ESP32 Light Sleep When BT Is Off", (1024*8), NULL, 10, NULL);
 }
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* RTOS FUNCTIONS                                       */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void task_SLEEP_startLightSleep     ( void *arg )
+void task_SLEEP_startLightSleep ( void *arg )
 {
     //LOG
     ESP_LOGI(TAG, "Starting Light Sleep Task");
@@ -46,14 +52,16 @@ void task_SLEEP_startLightSleep     ( void *arg )
     //START FREERTOS ENDLESS LOOP
     while(1)
     {
-        if (BT_isON() == false)
+        if ( !BT_isON() )
         {
+            // LOG MESSAGE AT TIME OF ESP32 GOING TO SLEEP
+            ESP_LOGI(TAG, "ESP32 Entering Light Sleep");
             // ENABLE GPIO AND SET A TIMER AS WAKEUP SOURCES
             esp_sleep_enable_ext0_wakeup(BUTTON_GPIO, false);
             esp_sleep_enable_timer_wakeup(SLEEP_TIME_SECONDS*uS_TO_S_FACTOR);
+            //
             timeBeforeSleep = esp_timer_get_time();
-            // LOG MESSAGE AT TIME OF ESP32 GOING TO SLEEP
-            ESP_LOGI(TAG, "ESP32 Entering Light Sleep");
+            //
             esp_light_sleep_start();
             //  CALCULATE TIME SPENT ASLEEP
             timeSpentAsleep = esp_timer_get_time() - timeBeforeSleep;
@@ -61,7 +69,8 @@ void task_SLEEP_startLightSleep     ( void *arg )
             // UPDATE THE TICK COUNT BASED ON TIME SPENT ASLEEP
             xTaskCatchUpTicks((timeSpentAsleep) / uS_TO_TICKS_FACTOR);
         }
-        vTaskDelay(12000);
+        vTaskDelay( pdMS_TO_TICKS(12000) );
+
     }
     
 }
