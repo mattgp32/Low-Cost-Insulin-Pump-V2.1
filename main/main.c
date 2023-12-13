@@ -34,6 +34,7 @@
 #include "ins_rate.h"
 #include "pump_BT.h"
 #include "button.h"
+#include "sleep.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE DEFINITIONS                                  */
@@ -84,7 +85,7 @@ void app_main(void)
     BT_start();
     LED_start();
     INSRATE_start();
-
+    SLEEP_start();
     //
     ESP_LOGI(TAG, "Finish Booting RTOS Tasks");
 }
