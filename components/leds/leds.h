@@ -45,6 +45,7 @@ extern "C" {
 void LED_init               ( void );
 void LED_start              ( void );
 void LED_wave               ( void );
+void LED_waveFour           ( void );
 void LED_flashFive          ( void );
 void LED_flashFive_double   ( void );
 void LED_flashFive_triple   ( void );

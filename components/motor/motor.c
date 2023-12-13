@@ -29,6 +29,8 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void MOTOR_enable 	( void );
+void MOTOR_disable 	( void );
 void MOTOR_setDir   ( bool );
 void MOTOR_step 	( void );
 
@@ -37,6 +39,8 @@ void MOTOR_step 	( void );
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 uint64_t steps_turned = 0;
+
+bool availableForControl = true;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -65,6 +69,116 @@ void MOTOR_init ( void )
 	gpio_set_level( MOTOR_DRIVER_GPIO_nEN, 		MOTOR_DRIVER_DEFAULT_nEN );
 	gpio_set_level( MOTOR_DRIVER_GPIO_nSLEEP, 	MOTOR_DRIVER_DEFAULT_nSLEEP );
 }
+
+/*
+ * Read The Fult Pin On The Motor Driver
+ *
+ * Returns:	True - Fault Present
+ * 			False - No Fault
+ */
+bool MOTOR_getFault ( void )
+{
+	// RETRIEVE FAULT PIN VALUE
+	bool retVal = !gpio_get_level( MOTOR_DRIVER_GPIO_nFAULT );
+
+	// LOG FAULT VALUE
+   	ESP_LOGI(TAG, "Motor Driver Fault Status Requested: %d", retVal);
+	
+	// RETURN
+	return retVal;
+}
+
+/*
+ * Turn The Motor 'steps' Number of Steps In Defined Direction 
+ */
+bool MOTOR_stepX ( bool dir, uint32_t steps )
+{
+	//
+	bool retVal = false;
+	// LOW BATTERY DETECTED
+	if ( ADC_battCritical() ) {
+		ESP_LOGI(TAG, "ERROR: BATTERY CRITICALLY LOW. Refusing to drive motor");
+	}
+	// POT AT MAX POSITION
+	if ( ADC_potAtMax() && dir == MOTOR_FWD ) {
+		ESP_LOGI(TAG, "ERROR: POTENTIOMETER AT MAXIMUM POSITION. Refusing to drive motor");
+	}
+	// POT AT MINIMUM POSITION (Reset)
+	if ( ADC_potReset() && dir == MOTOR_RVS ) {
+		ESP_LOGI(TAG, "ERROR: POTENTIOMETER AT MINIMUM POSITION. Refusing to drive motor");
+	}
+	// NORMAL OPERATION
+	else {
+		// LOG 
+		if ( dir == MOTOR_FWD ) {
+			ESP_LOGI(TAG, "Command: Drive Motor %ld Steps FWD", steps);
+		} else {
+			ESP_LOGI(TAG, "Command: Drive Motor %ld Steps RVS", steps);
+		}
+
+		// ENABLE MOTOR DRIVER FUNCTION
+		MOTOR_enable();
+		// UPDATE MOTOR TURN DIRECTION
+		MOTOR_setDir( dir );
+
+		// STEP THE MOTOR DEFINED STEPS
+		ESP_LOGI(TAG, "Drive Plunger Motor");
+		while ( steps > 0 ) 
+		{
+			// CHECK IF ENDSTOPS REACHED
+			if ( dir == MOTOR_FWD && ADC_potAtMax() ) {
+				ESP_LOGI(TAG, "Reached Pot Maximum Position, Aborting Remaining Steps (%ld)", steps);
+				break;
+			} else if ( dir == MOTOR_RVS && ADC_potReset() ) {
+				ESP_LOGI(TAG, "Reached Pot Reset Position, Aborting Remaining Steps (%ld)", steps);	
+				break;
+			}
+			// TAKE A STEP AND DECREMENT COUNTER
+			MOTOR_step();
+			steps -= 1;
+		}
+		// Did The Full Delivery Of Steps Complete
+		if ( steps == 0 ) {
+			retVal = true;
+		}
+		// DISABLE MOTOR FOR POWER SAVING
+		MOTOR_disable();
+	}
+	// RETURN
+	return retVal;
+}
+
+/*
+ *
+ */
+bool MOTOR_avalibleForControl ( void )
+{
+	return availableForControl;
+}
+
+/*
+ *
+ */
+void MOTOR_takeControl ( void )
+{
+	availableForControl = false;
+}
+
+/*
+ *
+ */
+void MOTOR_releaseControl ( void )
+{
+	availableForControl = true;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* RTOS FUNCTIONS                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* PRIVATE FUNCTIONS                                    */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
  * Enable Motor Driver Functionality
@@ -99,60 +213,6 @@ void MOTOR_disable ( void )
 	// DELAY TO ALLOW POWER SUPPLY TO CRASH
 	vTaskDelay( 200/portTICK_PERIOD_MS );
 }
-
-/*
- * Read The Fult Pin On The Motor Driver
- *
- * Returns:	True - Fault Present
- * 			False - No Fault
- */
-bool MOTOR_getFault ( void )
-{
-	// RETRIEVE FAULT PIN VALUE
-	bool retVal = !gpio_get_level( MOTOR_DRIVER_GPIO_nFAULT );
-
-	// LOG FAULT VALUE
-   	ESP_LOGI(TAG, "Motor Driver Fault Status Requested: %d", retVal);
-	
-	// RETURN
-	return retVal;
-}
-
-/*
- * Turn The Motor 'steps' Number of Steps In Defined Direction 
- */
-void MOTOR_stepX ( bool dir, uint16_t steps )
-{
-	// LOG 
-	if ( dir == MOTOR_FWD ) {
-   		ESP_LOGI(TAG, "Command: Drive Motor %d Steps FWD", steps);
-	} else {
-   		ESP_LOGI(TAG, "Command: Drive Motor %d Steps RVS", steps);
-	}
-
-	// ENABLE MOTOR DRIVER FUNCTION
-	MOTOR_enable();
-	// UPDATE MOTOR TURN DIRECTION
-	MOTOR_setDir( dir );
-
-	// STEP THE MOTOR DEFINED STEPS
-   	ESP_LOGI(TAG, "Drive Plunger Motor");
-	while ( steps > 0 ) {
-		MOTOR_step();
-		steps -= 1;
-	}
-
-	// DISABLE MOTOR FOR POWER SAVING
-	MOTOR_disable();
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* RTOS FUNCTIONS                                       */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-/* PRIVATE FUNCTIONS                                    */
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /*
  * Sets The Direction Of the Stepper Motor

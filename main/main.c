@@ -42,7 +42,7 @@
 #define TAG                     "SYSTEM"
 
 #define uS_TO_S_FACTOR          1000000ULL
-#define uS_TO_TICKHZ_FACTOR     10000
+#define uS_TO_TICKHZ_FACTOR     1000
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE TYPES                                        */
@@ -62,9 +62,6 @@ void SYSTEM_init ( void );
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/*
- * Description
- */
 void app_main(void)
 {
     //
@@ -72,12 +69,12 @@ void app_main(void)
 
     // INITIALISE MODULES
     SYSTEM_init();
+    BUTTON_init();
+    LED_init();
+    ADC_init();
+    MOTOR_init();
     INSRATE_init();
     BT_init();
-    LED_init();
-    MOTOR_init();
-    ADC_init();
-    BUTTON_init();
 
     //
     ESP_LOGI(TAG, "Finished Initialising Component Modules");
@@ -85,8 +82,8 @@ void app_main(void)
 
     // START ALL RTOS TASKS
     BT_start();
-    INSRATE_start();
     LED_start();
+    INSRATE_start();
 
     //
     ESP_LOGI(TAG, "Finish Booting RTOS Tasks");

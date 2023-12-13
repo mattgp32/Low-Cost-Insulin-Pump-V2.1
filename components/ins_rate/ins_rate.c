@@ -8,7 +8,7 @@
 
 #define TAG                         "INSRATE"
 
-#define STEPS_PER_UNIT              740         // Altered based on testing
+#define STEPS_PER_UNIT              770         // Altered based on testing
 #define MIN_DELIVERY_SIZE           25
 #define MIN_DELIVERY_STEPS          18
 #define MIN_BOLUS_DELIVERY_SIZE     50
@@ -34,33 +34,28 @@
 /* PRIVATE PROTOTYPES                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+void INSRATE_start_deliverBolus         ( void );
+void INSRATE_start_rewindPlunger        ( void );
+void INSRATE_start_primePlunger         ( void );
+
 void INSRATE_sliceString                ( const char * );
 void INSRATE_writeData_basalRate        ( int );
 void INSRATE_writeData_bolus            ( int );
-void INSRATE_calculateBasalFrequency    ( void );
+void INSRATE_calculateBasalFrequency    ( uint32_t *, uint32_t *, TickType_t * );
 
 void task_INSRATE_deliverBasal          ( void * );
 void task_INSRATE_deliverBolus          ( void * );
-// void task_INSRATE_auxilaryFunctions     ( void * );
+void task_INSRATE_rewindPlunger         ( void * );
+void task_INSRATE_primePlunger          ( void * );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-bool        motorAvaliable = true;
-
-int32_t     basal_rate = 0;
-int32_t     basal_rateTemp = 0;
-bool        basal_rateNew = false;
-int32_t     basal_delPerHour = 0;
-TickType_t  basal_frequency = 0;
-
-int32_t     bolus_size = 0;
-bool        bolus_new = false;
-
-bool        plunger_Rewind = false;
-int32_t     plunger_prime = 0;
-bool        plunger_primeNew = false;
+int32_t basalRate = 0;
+int32_t bolusSize = 0;
+int32_t primeSize = 0;
+bool    rewindPlunger = false;
 
 uint8_t index_arr[2] = {0};
 time_t unix_modifier = 0;
@@ -75,24 +70,17 @@ time_t unix_modifier = 0;
  */
 void INSRATE_init ( void )
 {
-    // LOG
+    // Log Initialisation Of Module
     ESP_LOGI(TAG, "Initialising Insulin Rate Module");
-
-    // INITIALISE FUNCTION VARIABLES   
+    // Initialise Function Variables   
     nvs_handle_t handle;
-
-    // INITIALISE RATE STORAGE NVS PARTITION
+    // Initialise Rate Storage NVS Partition
     nvs_flash_init_partition("rate_storage");
-
-    // RETRIEVE BASAL RATE FROM NVS
+    // Retrieve Basal Rate From NVS
     nvs_open_from_partition("rate_storage", "basal_rate", NVS_READONLY, &handle);
-    nvs_get_i32(handle, "basal_rate", &basal_rate);
-    ESP_LOGI(TAG, "Retrieved Basal Rate From NVS = %ld", basal_rate);
-
-    // CALCULATE DELIVERY STATS
-    INSRATE_calculateBasalFrequency();
-    ESP_LOGI(TAG, "Calculated Basal Delivery Frequency = %ld", basal_frequency);
-    ESP_LOGI(TAG, "Calculated Delivery Per Hour = %ld", basal_delPerHour);
+    nvs_get_i32(handle, "basal_rate", &basalRate);
+    // Log Basal Rate
+    ESP_LOGI(TAG, "Retrieved Basal Rate From NVS = %ld", basalRate);
 }
 
 /*
@@ -100,9 +88,10 @@ void INSRATE_init ( void )
  */
 void INSRATE_start ( void )
 {
-    xTaskCreate(task_INSRATE_deliverBasal, "start insulin deliveries", 4096, NULL, 21, NULL);
-    xTaskCreate(task_INSRATE_deliverBolus, "give bolus", 4092, NULL, 20, NULL);
-    // xTaskCreate(task_INSRATE_auxilaryFunctions, "rewind motor if flag set", 4092, NULL, 4, NULL);
+    xTaskCreate(task_INSRATE_deliverBasal, "start insulin deliveries", (4*1024), NULL, 20, NULL);
+    xTaskCreate(task_INSRATE_deliverBolus, "deliver bolud", (4*1024), NULL, 19, NULL);
+    xTaskCreate(task_INSRATE_rewindPlunger, "rewind plunger", (4*1024), NULL, 18, NULL);
+    xTaskCreate(task_INSRATE_primePlunger, "prime plunger", (4*1024), NULL, 18, NULL);
 }
 
 /*
@@ -146,7 +135,7 @@ void INSRATE_readAndStoreData ( const char *data )
         dataInsulin = atof(basal_delivery);
         dataInsulin_i = dataInsulin*1000;
         // LOG BASAL RATE
-        ESP_LOGI(TAG, "Extracted Basal Rate: %d", dataInsulin_i); 
+        ESP_LOGI(TAG, "Recieved Update Basal Rate Command (%d Units)", dataInsulin_i); 
         // INITIALISE PARTITION AND WRITE BASIL RATE
         INSRATE_writeData_basalRate(dataInsulin_i);
     } 
@@ -161,7 +150,7 @@ void INSRATE_readAndStoreData ( const char *data )
         dataInsulin = atof(bolus_delivery);
         dataInsulin_i = dataInsulin*1000;
         // LOG BOLUS SIZE
-        ESP_LOGI(TAG, "Extracted Bolus Size: %d", dataInsulin_i); 
+        ESP_LOGI(TAG, "Recieved Deliver Bolus Command (%d Units)", dataInsulin_i); 
         // INITIALISE PARTITION AND WRITE BOLUS
         INSRATE_writeData_bolus(dataInsulin_i);
     } 
@@ -170,9 +159,9 @@ void INSRATE_readAndStoreData ( const char *data )
     else if ( strcmp(data_type, "RE") == 0 ) 
     {
         // LOG REWIND 
-        ESP_LOGI(TAG, "Setting Rewind Flag"); 
-        // TOGGLE FLAG TO INITIATE REWIND
-        plunger_Rewind = true;
+        ESP_LOGI(TAG, "Recieved Plunger Rewind Command"); 
+        // START TASK TO REWIND PLUNGER
+        rewindPlunger = true;
     } 
 
     // DATATYPE: PRIME STRINGE
@@ -183,20 +172,10 @@ void INSRATE_readAndStoreData ( const char *data )
         prime_delivery[index_arr[1]-index_arr[0]-1] = '\0';
         strncpy(prime_delivery, &data[index_arr[0]+1] , (index_arr[1] - index_arr[0])-1);
         dataInsulin = atof(prime_delivery);
-        
         //
-        ESP_LOGI(TAG, "Extracted Plunger Prime Amount: %d [Units]", (int)dataInsulin); 
-        ESP_LOGI(TAG, "Starting Plunger Priming Process"); 
-
-        // INITIATE SYRINGE PRIMING
-        for(int i = 0; i < (int)dataInsulin; i++) 
-        {
-            ESP_LOGI(TAG, "Priming Unit %d / %d", i+1, (int)dataInsulin); 
-            MOTOR_stepX(true, STEPS_PER_UNIT);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
+        ESP_LOGI(TAG, "Recieved Plunger Prime Command (%d Units)", (int)dataInsulin); 
         //
-        ESP_LOGI(TAG, "Finishing Plunger Priming Process"); 
+        primeSize = dataInsulin;
     } 
 
     // DATATYPE: UNKNOWN
@@ -204,6 +183,48 @@ void INSRATE_readAndStoreData ( const char *data )
         ESP_LOGI(TAG, "You have entered an invalid type"); 
     }
 }
+
+/*
+ * Retrieves The Current Basal Rate
+ */
+int32_t INSRATE_getBasalRate ( void )
+{ 
+    return basalRate;
+}
+
+/*
+ * Returns True If The Basal Rate Is Zero
+ */
+bool INSRATE_zeroBasalRate ( void )
+{ 
+    return (basalRate == 0);
+}
+
+/*
+ * Returns True If The Bolus Delivery Task Is Active
+ */
+bool INSRATE_deliveringBolus ( void )
+{ 
+    return ( bolusSize != 0 );
+}
+
+/*
+ * Returns True If The Plunger/Motor Rewind Task Is Active
+ */
+bool INSRATE_rewindingPlunger ( void )
+{ 
+    return rewindPlunger;
+}
+
+
+/*
+ * Returns True If The Plunger Prime Task Is Active
+ */
+bool INSRATE_primingPlunger ( void )
+{ 
+    return ( primeSize != 0 );
+}
+
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* RTOS FUNCTIONS                                       */
@@ -214,51 +235,62 @@ void INSRATE_readAndStoreData ( const char *data )
  */
 void task_INSRATE_deliverBasal ( void *arg )
 {
-    // LOG
-    ESP_LOGI(TAG, "Starting Basal Insulin Delivery Handler Task");
+    // Log Start Of Task
+    ESP_LOGI(TAG, "Opening Basal Insulin Delivery Handler Task");
 
-    // LOOP TO INFINITY AND BEYOND
+    // Initialise Function Variables
+    uint32_t    working_basalRate = 0;
+    uint32_t    working_basalDelPerHour = 0;
+    TickType_t  working_basalFrequency = 0;
+
+    // Start Delay
+    vTaskDelay( pdMS_TO_TICKS(10*1000) );
+
+    // Loop to Infinity And Beyond
     while (1)
     {
-        // CHECK FOR NEW BASAL RATE
-        if ( basal_rateNew ) 
+        // Check For a New Basal Rate Waiting To Be Implemented
+        if ( working_basalRate != basalRate ) 
         {
-            // MOVE NEW BASAL RATE INTO WORKING RATE 
-            basal_rate = basal_rateTemp;
-            ESP_LOGI(TAG, "New Basal Rate Applied To Working Rate (%ld)", basal_frequency);
-            // CALCULATE DELIVERY STATS
-            INSRATE_calculateBasalFrequency();
-            ESP_LOGI(TAG, "Calculated New Basal Delivery Frequency = %ld", basal_frequency);
-            ESP_LOGI(TAG, "Calculated New Delivery Per Hour = %ld", basal_delPerHour);
+            // Move Temp Basal To Working Basal Rate
+            working_basalRate = basalRate;
+            ESP_LOGI(TAG, "New Basal Rate Applied To Working Rate (%ld)", working_basalRate );
+            // Calculate Delivery Stats
+            INSRATE_calculateBasalFrequency( &working_basalRate, &working_basalDelPerHour, &working_basalFrequency );
+            ESP_LOGI(TAG, "Calculated New Basal Delivery Frequency = %ld", working_basalFrequency);
+            ESP_LOGI(TAG, "Calculated New Delivery Per Hour = %ld", working_basalDelPerHour);
         }
 
-        // CHECK FOR 'ZERO' RATE FREQUENCY
-        if ( basal_frequency <= 0 ) 
+        // 'ZERO' RATE FREQUENCY
+        if ( working_basalFrequency <= 0 ) 
         {
+            // Log Rate Error
             ESP_LOGI(TAG, "Delivery Frequency = 0. Waiting For Update");
-            // LOOP PACING
+            // Loop Pacing
             vTaskDelay( pdMS_TO_TICKS( THREE_MINUTES*SECONDS_TO_MS ) ); // Three minutes is the fastest delivery time
         }
+
         // NORMAL OPERATION  
         else 
         {
-            if ( !motorAvaliable ) {
+            // Check If Motor Is Being Used By Another Module
+            if ( !MOTOR_avalibleForControl() ) 
+            {
+                // Log Busy Wait For Motor Control
                 ESP_LOGI(TAG, "Motor Unavaliable To Deliver Basal, Wait Until Rescource Becomes Avaliable");
-                // WAIT FOR MOTOR CONTROL TO BECOME AVALIABLE
-                while ( !motorAvaliable ) { vTaskDelay( pdMS_TO_TICKS(10) ); }
+                // Wait For Motor Control To Become Avalialbe
+                while ( !MOTOR_avalibleForControl() ) { vTaskDelay( pdMS_TO_TICKS(10) ); }
             }
-            // TAKE CONTROL OF MOTOR 
-            motorAvaliable = false;
-            // LOG DELIVERY OF INSULIN
+            // Take Control of Motor 
+            MOTOR_takeControl();
+            // Log Delivery Of Insulin
             ESP_LOGI(TAG, "Delivering Next Basal Dose");
-            // STEP MOTOR
-            MOTOR_stepX( true, (int)(STEPS_PER_UNIT * basal_rate) / (basal_delPerHour*1000) );
-            // READ IN SYRING POT POSITION
-            // ADC_updatePot(); // ---------------------------------------------------------------------------------------why are you reading pot? you arnt doing anything with it
-            // RELEASE CONTROL OF MOTOR
-            motorAvaliable = true;
-            // LOOP PACING
-            vTaskDelay( pdMS_TO_TICKS(basal_frequency) );
+            // Step Motor
+            MOTOR_stepX( true, (int)(STEPS_PER_UNIT * working_basalRate) / (working_basalDelPerHour*1000) );
+            // Release Control of Motor
+            MOTOR_releaseControl();
+            // Loop Pacing
+            vTaskDelay( pdMS_TO_TICKS(working_basalFrequency) );
         }
     }
 }
@@ -268,160 +300,236 @@ void task_INSRATE_deliverBasal ( void *arg )
  */
 void task_INSRATE_deliverBolus ( void *arg )
 {
-    // LOG 
-    ESP_LOGI(TAG, "Starting Basal Insulin Delivery Handler Task");
+    // Log Start of Task
+    ESP_LOGI(TAG, "Opening Bolus Insulin Delivery Handler Task");
 
-    // LOOP TO INFINITY AND BEYOND
     while (1)
     {
-        // CHECK FOR NEW BOLUS
-        if ( bolus_new )
+        if ( bolusSize ) 
         {
-            // RESET NEW BOLUS FLAG AND COPY BOLUS INFORMATION LOCALLY - DONE NOW TO DETECT CHANGE OR CANCELLATION 
-            bolus_new = false;
-            int32_t bolus_sizeLocal = bolus_size;
 
-            // CHECK FOR 'ZERO' SIZE BOLUS
-            if ( (bolus_sizeLocal / MIN_DELIVERY_SIZE) == 0 )
+            // Initialise Function Variables
+            uint32_t working_bolusSize = bolusSize;
+
+            // 'ZERO' SIZE BOLUS
+            if ( (working_bolusSize / MIN_DELIVERY_SIZE) == 0 )
             {
+                // Log Size Error
                 ESP_LOGI(TAG, "Requested Bolus = 0");
+                // Notify User
                 LED_flashFive_double();
             } 
 
             // NORMAL OPERATION
             else 
             {
-                // CHECK IF MOTOR BEING USED BUY OTHER TASKS
-                if ( !motorAvaliable ) {
-                    ESP_LOGI(TAG, "Motor Unavaliable To Deliver Bolus, Wait Until Rescource Becomes Avaliable");
-                    // WAIT FOR MOTOR CONTROL TO BECOME AVALIABLE
-                    while ( !motorAvaliable ) { vTaskDelay( pdMS_TO_TICKS(10) ); }
-                }
-                // TAKE CONTROL OF MOTOR 
-                motorAvaliable = false;
-                // CALCULATE REQUIRED DOSES TO REACH TOTAL BOLUS
-                uint32_t numDoses = bolus_sizeLocal / MIN_BOLUS_DELIVERY_SIZE;
-                // LOG BOLUS INFORMATION
-                ESP_LOGI(TAG, "Requested Bolus = %ld (Delivering in %ld Doses of 0.05U)", bolus_sizeLocal, numDoses);
-                ESP_LOGI(TAG, "Starting Bolus Delivery");
-                // DELIVER INSULIN
-                for ( uint8_t i = 0; i < numDoses; i++ )
+                // Check If Motor Is Being Used By Other Tasks
+                if ( !MOTOR_avalibleForControl() ) 
                 {
-                    // DETECT CANCELLED OR CHANGED BOLUS SIZE
-                    if ( bolus_new )
+                    // Log Busy Wait For Motor Control
+                    ESP_LOGI(TAG, "Motor Unavaliable To Deliver Bolus, Wait Until Rescource Becomes Avaliable");
+                    // Wait For Motor Control To Become Avaliable
+                    while ( !MOTOR_avalibleForControl() ) { vTaskDelay( pdMS_TO_TICKS(100) ); }
+                }
+                // Take Control Of Motor 
+                MOTOR_takeControl();
+                // Calculate Required Number Of Doses To Reach Total Bolus
+                uint32_t working_numDoses = working_bolusSize / MIN_BOLUS_DELIVERY_SIZE;
+                // Log Bolus Information
+                ESP_LOGI(TAG, "Requested Bolus = %ld (Delivering in %ld Doses of 0.05U)", working_bolusSize, working_numDoses);
+                ESP_LOGI(TAG, "Starting Bolus Delivery");
+                // Deliver Insulin
+                for ( uint8_t i = 1; i <= working_numDoses; i++ )
+                {
+                    // Detect Bolus Cancelled
+                    if ( bolusSize == 0 )
                     {
-                        // LOG CANCELLATION
-                        ESP_LOGI(TAG, "Bolus Cancelled. Delivered %d / %ld Doses", i, numDoses);
-                        // BREAK FROM DELIVERY LOOP
+                        // Log Cancellation Of Task 
+                        ESP_LOGI(TAG, "Bolus Cancelled. Users Cancelled Via Phone App");
+                        ESP_LOGI(TAG, "Delivered %d / %ld Doses", (i-1), working_numDoses);
+                        // Wipe Working Bolus Size
+                        working_bolusSize = 0;
+                        // Break From Delivery Loop
                         break;
                     }
-                    // CONTINUE DELIVERING BOLUS
-                    else
+
+                    // Detect Bolus Size Changed
+                    else if ( bolusSize != working_bolusSize )
                     {
-                        // LOG DELIVERY
-                        ESP_LOGI(TAG, "Delivering Bolus Dose %d / %ld", i+1, numDoses);
-                        // DRIVE MOTOR
-                        MOTOR_stepX( true, MIN_BOLUS_DELIVERY_STEPS );
-                        // WAIT 
-                        vTaskDelay(pdMS_TO_TICKS(1200));
+                        // Calculate Required Number Of Doses To Reach Total Bolus
+                        uint32_t temp_bolusSize = bolusSize;
+                        uint32_t temp_numDoses = temp_bolusSize / MIN_BOLUS_DELIVERY_SIZE;
+                        // Log Change In Bolus Size
+                        ESP_LOGI(TAG, "Bolus Size Changed. Original Bolus = %ld, New Bolus = %ld", working_bolusSize, bolusSize);
+                        ESP_LOGI(TAG, "New Bolus Requires %ld Dose(s). Delivered %d So Far", temp_numDoses, (i-1));
+                        // Have We delivered Less (Or Currently On) The Number Of Doses To Meet The New Bolus 
+                        if ( i <= temp_numDoses ) 
+                        {
+                            ESP_LOGI(TAG, "Updating Bolus Information With New Bolus And Continuing Delivery");
+                            // Update Working Variables 
+                            working_bolusSize = temp_bolusSize;
+                            working_numDoses = temp_numDoses;
+                        } 
+                        // Have Already Delivered More Doses Than New Bolus Size
+                        else 
+                        {
+                            ESP_LOGI(TAG, "Bolus Cancelled. Already Delivered More Doses Than New Bolus Requires");
+                            // Wipe Working Bolus Size
+                            working_bolusSize = 0;
+                            // Break From Delivery Loop
+                            break;
+                        }
                     }
+
+                    // Hit End Of Potentiometer
+                    else if ( ADC_potAtMax() )
+                    {
+                        // Log Cancellation Of Task
+                        ESP_LOGI(TAG, "Bolus Cancelled, Potentiometer At End Of Range");
+                        ESP_LOGI(TAG, "Delivered %d / %ld Doses", (i-1), working_numDoses);               
+                        // Wipe Working Bolus Size
+                        working_bolusSize = 0;
+                        // Break From Delivery Loop
+                        break;
+                    }
+
+                    // Log Insulin Delivery
+                    ESP_LOGI(TAG, "Delivering Bolus Dose %d / %ld", i, working_numDoses);
+                    // Step Motor 
+                    MOTOR_stepX( true, MIN_BOLUS_DELIVERY_STEPS );
+                    // Loop Pacing
+                    vTaskDelay(pdMS_TO_TICKS(1200));
                 }
 
-                // CHECK IF NEED A 0.025U DOSE TO MEET TOTAL BOLUS REQUIRMENETS
-                if ( !bolus_new && (bolus_sizeLocal % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) 
+                // Was Bolus Cancelled - Only Time This Will Be 0 At This Stage Is If Bolus Was Cancelled
+                if ( working_bolusSize ) 
                 {
-                    // LOG DELIVERY
-                    ESP_LOGI(TAG, "Delivering additional dose of 0.025U to meet requested bolus size of %ld", bolus_sizeLocal);
-                    // DRIVE MOTOR
-                    MOTOR_stepX(true, MIN_DELIVERY_STEPS);
-                }
-
-                // LOG COMPLETION OF BOLUS
-                if ( bolus_new && bolus_size == 0 ) {
-                    ESP_LOGI(TAG, "Bolus Cancelled ");
-                } else if ( bolus_new ) {
-                    ESP_LOGI(TAG, "Bolus Value Updated - Restarting Bolus Delivery");
-                } else {
+                    // Check If A 0.025U Dose Is Needed To Meetin Total Bolus Requirement
+                    if ( (working_bolusSize % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE ) 
+                    {
+                        // Log Insulin Delivery
+                        ESP_LOGI(TAG, "Delivering additional dose of 0.025U to meet requested bolus size of %ld", working_bolusSize);
+                        // Step Motor
+                        MOTOR_stepX(true, MIN_DELIVERY_STEPS);
+                    }
+                    // Log Completion Of Delivery
                     ESP_LOGI(TAG, "Finishing Bolus Delivery");
                 }
-
-                // READ IN SYRING POT POSITION
-                ADC_updatePot(); // ---------------------------------------------------------------------------------------why are you reading pot? you arnt doing anything with it
                 
-                // RELEASE CONTROL OF MOTOR
-                motorAvaliable = true;
+                // Release Control Of Motor
+                MOTOR_releaseControl();
             }
+            //
+            bolusSize = 0;
         }
-
-        // LOOP PACING 
-        vTaskDelay( pdMS_TO_TICKS(INSRATE_BOLUS_LOOP_DELAY) );
-    } 
+        // Loop Pacing
+        vTaskDelay( pdMS_TO_TICKS(250) );
+    }
 }
 
-// /*
-//  * Handles Any Auilary Functions That Arnt Delivering Bolus Or Basal
-//  */
-// void task_INSRATE_auxilaryFunctions ( void *arg )
-// {
-//     // LOG
-//     ESP_LOGI(TAG, "Starting Auxilary Function Task");
+/*
+ * RTOS Task To Handle Rewind Of Motor/Plunger
+ */
+void task_INSRATE_rewindPlunger ( void *arg )
+{
+    // Log Start Of Rewind Task 
+    ESP_LOGI(TAG, "Opening Plunger Rewind Handler Task");
+    //
+    while (1) 
+    {
+        //
+        if ( rewindPlunger) 
+        {
+            // Initialise Loop Variables
+            uint8_t rewindLoops = 0; 
+            // Check If Motor Is Being Used By Other Tasks
+            if ( !MOTOR_avalibleForControl() ) 
+            {
+                // Log Busy Wait For Motor Control
+                ESP_LOGI(TAG, "Motor Unavaliable To Rewind Plunger, Wait Until Rescource Becomes Avaliable");
+                // Wait For Motor Control To Become Avaliable
+                while ( !MOTOR_avalibleForControl() ) { vTaskDelay( pdMS_TO_TICKS(100) ); }
+            }
+            // Take Control Of Motor 
+            MOTOR_takeControl();
+            // Log Rewind Of Plunger
+            ESP_LOGI(TAG, "Plunger Rewind Starting");
+            // Loop Until Pot Is In Reset Position
+            while ( !ADC_potReset() )
+            {
+                // Increment Motor Move Counter
+                rewindLoops += 1;
+                // Love Plunger Move 
+                ESP_LOGI(TAG, "Resetting Plunger, Units Reset = %d", rewindLoops);
+                // Step Motor In Reverse 1 Unit
+                MOTOR_stepX( MOTOR_RVS, STEPS_PER_UNIT );    
+            }
+            // Release Control Of Motor
+            MOTOR_releaseControl();
+            //
+            rewindPlunger = false;
+            // Log Completion Of Task
+            ESP_LOGI(TAG, "Plunger Rewind Complete");
+        }
+        // Loop Pacing
+        vTaskDelay( pdMS_TO_TICKS(250) );
+    }
+}
 
-//     // INITIALISE FUNCTION VARIABLES
-//     uint8_t rewindLoop = 0; 
-
-//     // LOOP TO INFINITY AND BEYOND
-//     while (1)
-//     {
-//         // CHECK FOR PLUNGER REWIND COMMAND
-//         if ( plunger_Rewind ) 
-//         {
-//             // CHECK IF FIRST LOOP OF PLUNDER REWIND
-//             if ( rewindLoop == 0 ) {
-//                 // CHECK IF MOTOR IS BEING USED
-//                 if ( !motorAvaliable ) {
-//                     ESP_LOGI(TAG, "Motor Unavaliable To Rewind, Wait Until Rescource Becomes Avaliable");
-//                     // WAIT FOR MOTOR CONTROL TO BECOME AVALIABLE
-//                     while ( !motorAvaliable ) { vTaskDelay( pdMS_TO_TICKS(10) ); }
-//                 }
-//                 // TAKE CONTROL OF MOTOR 
-//                 motorAvaliable = false;
-//                 // LOG REWIND OF PLUGER
-//                 ESP_LOGI(TAG, "Starting Plunger Rewind Task");
-//             }
-//             // INCREMENT MOTOR MOVE COUNTER
-//             rewindLoop += 1;
-//             // LOG PLUNGER MOVE 
-//             ESP_LOGI(TAG, "Moving Plunger #%d", rewindLoop);
-//             // MOVE PLUNGER BACK
-//             MOTOR_stepX( false, STEPS_PER_UNIT*2 );    
-//             // UPDATE POT POSITION DATA
-//             ADC_updatePot();
-//             // CHECK FOR SYRINGE RESET CONDITION POSITION
-//             if ( ADC_getPotPosition() <= 0 ) {
-//                 // LOG COMPLETION OF TASK
-//                 ESP_LOGI(TAG, "Finishing Plunger Rewind Task ");
-//                 // RELEASE MOTOR CONTROL
-//                 motorAvaliable = false;
-//                 // RESET REWIND VARIABLES
-//                 plunger_Rewind = false;
-//                 rewindLoop = 0;
-//             }
-//         }
-
-//         // CHECK FOR PLUNGER PRIME COMMAND
-//         else if ( plunger_primeNew) {
-            
-//             // RELEASE MOTOR CONTROL
-//             motorAvaliable = false;
-//             // RESET PLUNGER PRIME AMOUNT VARIABLE
-//             plunger_prime = 0;
-//             plunger_primeNew = false;
-//         }
-
-//         // LOOP PACING
-//         vTaskDelay( pdMS_TO_TICKS(INSRATE_REWIND_LOOP_DELAY) );
-//     }
-// }
+/*
+ *
+ */
+void task_INSRATE_primePlunger ( void *arg )
+{
+    // Log Start Of Priming Task 
+    ESP_LOGI(TAG, "Opening Prime Plunger Handler Task");
+    // 
+    while (1)
+    {
+        if ( primeSize )
+        {    
+            // Initialise Function Variables
+            uint32_t working_primeSize = primeSize;
+            // Check If Motor Is Being Used By Other Tasks
+            if ( !MOTOR_avalibleForControl() ) 
+            {
+                // Log Busy Wait For Motor Control
+                ESP_LOGI(TAG, "Motor Unavaliable To Prime Plunger, Wait Until Rescource Becomes Avaliable");
+                // Wait For Motor Control To Become Avaliable
+                while ( !MOTOR_avalibleForControl() ) { vTaskDelay( pdMS_TO_TICKS(100) ); }
+            }
+            // Take Control Of Motor 
+            ESP_LOGI(TAG, "Requested Prime = %ld Units", working_primeSize);
+            ESP_LOGI(TAG, "Priming Plunger Starting");
+            // Deliver Insulin
+            for ( uint8_t i = 1; i <= working_primeSize; i++ )
+            {
+                // Hit End Of Potentiometer
+                if ( ADC_potAtMax() )
+                {
+                    // Log Cancellation Of Task
+                    ESP_LOGI(TAG, "Prime Cancelled, Potentiometer At End Of Range");
+                    ESP_LOGI(TAG, "Delivered %d / %ld Doses", (i-1), working_primeSize);               
+                    // Wipe Working Bolus Size
+                    working_primeSize = 0;
+                    // Break From Delivery Loop
+                    break;
+                }
+                // Log Plunger Move 
+                ESP_LOGI(TAG, "Priming Plunger Units %d / %ld", i, working_primeSize);
+                // Step Motor In Reverse 1 Unit
+                MOTOR_stepX( MOTOR_FWD, STEPS_PER_UNIT );    
+            }
+            // Release Control Of Motor
+            MOTOR_releaseControl();
+            //
+            primeSize = 0;
+            // Log Completion Of Task
+            ESP_LOGI(TAG, "Priming Plunger Complete");
+        }
+        vTaskDelay( pdMS_TO_TICKS(250) );
+    }
+}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE FUNCTIONS                                    */
@@ -473,8 +581,7 @@ void INSRATE_writeData_basalRate ( int basal )
     ESP_LOGI(TAG, "New Basal Rate Saved to NVS = %d", basal);
 
     // SAVE BASAL RATE TO VARIABLE FOR USE AND TOGGLE FLAG
-    basal_rateTemp = basal;
-    basal_rateNew = true;
+    basalRate = basal;
 }
 
 /*
@@ -490,39 +597,38 @@ void INSRATE_writeData_bolus ( int bolus )
     }
 
     // SAVE BOLUS SIZE TO VARIABLE FOR USE AND TOGGLE FLAG
-    bolus_size = bolus;
-    bolus_new = true;
+    bolusSize = bolus;
 }
 
 /*
- * EXTRACTS BASAL INFO FROM NVS AND CALCULATED DELIVERY FREQUENCY
+ * Takes A Basal Rate And Cakculates The Delivereid Per Hour and Delivery Frequency
  */
-void INSRATE_calculateBasalFrequency ( void )
+void INSRATE_calculateBasalFrequency ( uint32_t *basal, uint32_t *dels, TickType_t *freq )
 {
-    // INITIALISE FUNCTION VARIABLES
-    int dels_per_hour = 0;
-    int dels_freq = 0;
+    // Initialise Function Variables
+    int temp_dels = 0;
+    int temp_freq = 0;
 
-    // CALCULATE REQUIRED DELIVERYS PER HOUR
-    dels_per_hour = basal_rate / MIN_DELIVERY_SIZE;
+    // Calculate deliveries per hour
+    temp_dels = *basal / MIN_DELIVERY_SIZE;
 
-    // CHECK DELIVERY LIMITS
-    if ( dels_per_hour > DELIVERY_PER_HR_MAX )
+    // Check Delivery Limits
+    if ( temp_dels > DELIVERY_PER_HR_MAX )
     {
-        ESP_LOGI(TAG, "Calculated Deliveries Per Hour (%d) > Max Allowable (%d). So truncating to Max", dels_per_hour, DELIVERY_PER_HR_MAX);
-        dels_per_hour = DELIVERY_PER_HR_MAX;
+        ESP_LOGI(TAG, "Calculated Deliveries Per Hour (%d) > Max Allowable (%d). So truncating to Max", temp_dels, DELIVERY_PER_HR_MAX);
+        temp_dels = DELIVERY_PER_HR_MAX;
     }
 
-    // CALCULATE DELIVERY FREQUENCY
-    if ( dels_per_hour <= 0 ) {
-        dels_freq = 0;
+    // Calculate Delivery Frequency
+    if ( temp_dels <= 0 ) {
+        temp_freq = 0;
     } else {
-        dels_freq = SECONDS_IN_AN_HOUR/dels_per_hour; //seconds between doses = dels_freq
+        temp_freq = (SECONDS_IN_AN_HOUR/temp_dels)* SECONDS_TO_MS;
     }
 
-    //
-    basal_delPerHour = dels_per_hour;
-    basal_frequency = dels_freq * SECONDS_TO_MS;
+    // Assign Local Temp Variables To External Working Variables
+    *dels = temp_dels;
+    *freq = temp_freq;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

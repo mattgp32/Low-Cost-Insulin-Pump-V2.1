@@ -47,9 +47,14 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void INSRATE_init               ( void );
-void INSRATE_start              ( void );
-void INSRATE_readAndStoreData   ( const char * );
+void    INSRATE_init                ( void );
+void    INSRATE_start               ( void );
+void    INSRATE_readAndStoreData    ( const char * );
+int32_t INSRATE_getBasalRate        ( void );
+bool    INSRATE_zeroBasalRate       ( void );
+bool    INSRATE_deliveringBolus     ( void );
+bool    INSRATE_rewindingPlunger    ( void );
+bool    INSRATE_primingPlunger      ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

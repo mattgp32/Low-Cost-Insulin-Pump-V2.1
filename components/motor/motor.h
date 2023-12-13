@@ -14,6 +14,8 @@
 #include "driver/gpio.h"
 #include "rom/ets_sys.h"
 
+#include "adc.h"
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -30,10 +32,12 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void MOTOR_init     ( void );
-void MOTOR_enable 	( void );
-void MOTOR_disable 	( void );
 bool MOTOR_getFault ( void );
-void MOTOR_stepX    ( bool, uint16_t );
+bool MOTOR_stepX    ( bool, uint32_t );
+
+bool MOTOR_avalibleForControl   ( void );
+void MOTOR_takeControl          ( void );
+void MOTOR_releaseControl       ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

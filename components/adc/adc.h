@@ -34,12 +34,15 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void ADC_init               ( void );
-void ADC_updatePot          ( void );
-int  ADC_getPotPosition     ( void );
-// void ADC_printBattLevel     ( void );
+void        ADC_init                ( void );
 
-void task_ADC_getBattLevel  ( void* arg );
+uint32_t    ADC_getBattVoltage      ( void );
+bool        ADC_battLow             ( void );
+bool        ADC_battCritical        ( void );
+
+uint32_t    ADC_getPotPosition      ( void );
+bool        ADC_potReset            ( void );
+bool        ADC_potAtMax            ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */
