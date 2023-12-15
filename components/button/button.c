@@ -25,7 +25,8 @@ void BUTTON_pressedISR      ( void * );
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-bool button_pressed = false;
+bool buttonBT = false;
+bool buttonUSB = false;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC FUNCTIONS                                     */
@@ -52,21 +53,37 @@ void BUTTON_init ( void )
 }
 
 /*
+ *
+ */
+bool BUTTON_getFlagUSB ( void )
+{
+    return buttonUSB;
+}
+
+/*
+ *
+ */
+void BUTTON_resetFlagUSB ( void )
+{
+    buttonUSB = false;
+}
+
+/*
  * Returns The Button Pressed Flag 
  * 
  * Has the Button Been Pressed And Passed Debouncing Criteria
  */
-bool BUTTON_getPressedFlag ( void )
+bool BUTTON_getFlagBT ( void )
 {
-    return button_pressed;
+    return buttonBT;
 }
 
 /*
  * Resets The Button Pressed Flag
  */
-void BUTTON_resetPressedFlag ( void )
+void BUTTON_resetFlagBT ( void )
 {
-    button_pressed = false;
+    buttonBT = false;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -104,7 +121,11 @@ void IRAM_ATTR BUTTON_pressedISR ( void *args )
         TickType_t time = xTaskGetTickCountFromISR() - tick;
         if ( (time >= 5) && (time <= 100) )
         {
-            button_pressed = true;
+            buttonBT = true;
+        }
+        else if ( (time >= 800) && (time <= 2000) )
+        {
+            buttonUSB = true;
         }
     }
 }

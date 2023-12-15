@@ -827,6 +827,7 @@ void task_BT_handler ( void *arg )
     ESP_LOGI(TAG, "Starting Bluetooth Handler Task");
 
     // INITIALISE TASK VARIABLES
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     TickType_t lastActivity = xTaskGetTickCount();
 
     // LOOP TO INFINITY AND BEYOND
@@ -856,13 +857,13 @@ void task_BT_handler ( void *arg )
             }
 
             // Manual (User Initiated) Bluetooth OFF Command
-            if ( BUTTON_getPressedFlag() ) 
+            if ( BUTTON_getFlagBT() ) 
             {
                 ESP_LOGI(TAG, "Bluetooth Button Presseed");
                 ESP_LOGI(TAG, "Bluetooth Turning OFF");
                 BT_disable();
                 vTaskDelay(pdMS_TO_TICKS(200));
-                BUTTON_resetPressedFlag();
+                BUTTON_resetFlagBT();
             }
             // Auto Bluetooth Timeoue
             else if ( (now - lastActivity) >= pdMS_TO_TICKS(BLUETOOTH_TIMEOUT) ) {
@@ -875,7 +876,7 @@ void task_BT_handler ( void *arg )
         else 
         {
             // 
-            if ( BUTTON_getPressedFlag() ) {
+            if ( BUTTON_getFlagBT() ) {
                 ESP_LOGI(TAG, "Restarting");
                 esp_restart();
             } 
@@ -883,7 +884,7 @@ void task_BT_handler ( void *arg )
         }
 
         // LOOP PACING
-        vTaskDelay(pdMS_TO_TICKS(200));  
+        vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(200));  
     }   
 }
 

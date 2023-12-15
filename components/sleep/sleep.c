@@ -52,7 +52,7 @@ void task_SLEEP_startLightSleep ( void *arg )
     //START FREERTOS ENDLESS LOOP
     while(1)
     {
-        if ( !BT_isON() )
+        if ( !BT_isON() && !LOGGING_connectedToPC() )
         {
             // LOG MESSAGE AT TIME OF ESP32 GOING TO SLEEP
             ESP_LOGI(TAG, "ESP32 Entering Light Sleep");

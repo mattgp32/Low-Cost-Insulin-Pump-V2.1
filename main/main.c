@@ -26,7 +26,6 @@
 #include "esp_private/esp_clk.h"
 #include "esp_sleep.h"
 #include "esp_timer.h"
-// #include "ble_comp_test.h"
 
 #include "adc.h"
 #include "motor.h"
@@ -34,6 +33,7 @@
 #include "ins_rate.h"
 #include "pump_BT.h"
 #include "button.h"
+#include "logging.h"
 #include "sleep.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -72,6 +72,7 @@ void app_main(void)
     SYSTEM_init();
     BUTTON_init();
     LED_init();
+    LOGGING_init();
     ADC_init();
     MOTOR_init();
     INSRATE_init();
@@ -82,6 +83,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Start Booting RTOS Tasks");
 
     // START ALL RTOS TASKS
+    LOGGING_start();
     BT_start();
     LED_start();
     INSRATE_start();
