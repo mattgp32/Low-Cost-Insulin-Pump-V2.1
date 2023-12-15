@@ -34,9 +34,11 @@ extern "C" {
 /* PUBLIC FUNCTIONS                                     */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void BUTTON_init                ( void );
-bool BUTTON_getPressedFlag      ( void );
-void BUTTON_resetPressedFlag    ( void );
+void BUTTON_init            ( void );
+bool BUTTON_getFlagUSB      ( void );
+void BUTTON_resetFlagUSB    ( void );
+bool BUTTON_getFlagBT       ( void );
+void BUTTON_resetFlagBT     ( void );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* EXTERN DECLARATIONS                                  */

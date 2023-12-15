@@ -34,6 +34,7 @@ extern "C" {
 #include "sdkconfig.h"
 
 #include "button.h"
+#include "logging.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PUBLIC DEFINITIONS                                   */

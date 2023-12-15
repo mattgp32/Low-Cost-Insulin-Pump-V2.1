@@ -123,6 +123,8 @@ void INSRATE_readAndStoreData ( const char *data )
         unix_modifier = atoi(unix_time);
         //
         ESP_LOGI(TAG, "Extracting UNIX Time"); 
+        //
+        LOGGING_append( recieve_time, unix_modifier );
     } 
 
     // DATATYPE: BASIL RATE
@@ -138,6 +140,8 @@ void INSRATE_readAndStoreData ( const char *data )
         ESP_LOGI(TAG, "Recieved Update Basal Rate Command (%d Units)", dataInsulin_i); 
         // INITIALISE PARTITION AND WRITE BASIL RATE
         INSRATE_writeData_basalRate(dataInsulin_i);
+        //
+        LOGGING_append( recieve_basal, dataInsulin_i );
     } 
 
     // DATATYPE: BOLUS
@@ -153,6 +157,8 @@ void INSRATE_readAndStoreData ( const char *data )
         ESP_LOGI(TAG, "Recieved Deliver Bolus Command (%d Units)", dataInsulin_i); 
         // INITIALISE PARTITION AND WRITE BOLUS
         INSRATE_writeData_bolus(dataInsulin_i);
+        //
+        LOGGING_append( recieve_bolus, dataInsulin_i );
     } 
 
     // DATATYPE: MOTOR REWIND
@@ -162,6 +168,8 @@ void INSRATE_readAndStoreData ( const char *data )
         ESP_LOGI(TAG, "Recieved Plunger Rewind Command"); 
         // START TASK TO REWIND PLUNGER
         rewindPlunger = true;
+        //
+        LOGGING_append( recieve_rewind, 0 );
     } 
 
     // DATATYPE: PRIME STRINGE
@@ -176,6 +184,8 @@ void INSRATE_readAndStoreData ( const char *data )
         ESP_LOGI(TAG, "Recieved Plunger Prime Command (%d Units)", (int)dataInsulin); 
         //
         primeSize = dataInsulin;
+        //
+        LOGGING_append( recieve_prime, dataInsulin_i );
     } 
 
     // DATATYPE: UNKNOWN
@@ -239,6 +249,7 @@ void task_INSRATE_deliverBasal ( void *arg )
     ESP_LOGI(TAG, "Opening Basal Insulin Delivery Handler Task");
 
     // Initialise Function Variables
+    TickType_t  xLastWakeTime = xTaskGetTickCount();
     uint32_t    working_basalRate = 0;
     uint32_t    working_basalDelPerHour = 0;
     TickType_t  working_basalFrequency = 0;
@@ -267,7 +278,7 @@ void task_INSRATE_deliverBasal ( void *arg )
             // Log Rate Error
             ESP_LOGI(TAG, "Delivery Frequency = 0. Waiting For Update");
             // Loop Pacing
-            vTaskDelay( pdMS_TO_TICKS( THREE_MINUTES*SECONDS_TO_MS ) ); // Three minutes is the fastest delivery time
+            vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( THREE_MINUTES*SECONDS_TO_MS ) ); // Three minutes is the fastest delivery time
         }
 
         // NORMAL OPERATION  
@@ -285,12 +296,14 @@ void task_INSRATE_deliverBasal ( void *arg )
             MOTOR_takeControl();
             // Log Delivery Of Insulin
             ESP_LOGI(TAG, "Delivering Next Basal Dose");
+            //
+            LOGGING_append( deliver_basal, working_basalRate );
             // Step Motor
             MOTOR_stepX( true, (int)(STEPS_PER_UNIT * working_basalRate) / (working_basalDelPerHour*1000) );
             // Release Control of Motor
             MOTOR_releaseControl();
             // Loop Pacing
-            vTaskDelay( pdMS_TO_TICKS(working_basalFrequency) );
+            vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(working_basalFrequency) );
         }
     }
 }
@@ -302,6 +315,8 @@ void task_INSRATE_deliverBolus ( void *arg )
 {
     // Log Start of Task
     ESP_LOGI(TAG, "Opening Bolus Insulin Delivery Handler Task");
+    // UPDATE LOOP VARIABLES
+    TickType_t xLastWakeTime = xTaskGetTickCount();
 
     while (1)
     {
@@ -338,6 +353,8 @@ void task_INSRATE_deliverBolus ( void *arg )
                 // Log Bolus Information
                 ESP_LOGI(TAG, "Requested Bolus = %ld (Delivering in %ld Doses of 0.05U)", working_bolusSize, working_numDoses);
                 ESP_LOGI(TAG, "Starting Bolus Delivery");
+                //
+                LOGGING_append( deliver_bolus, working_bolusSize );
                 // Deliver Insulin
                 for ( uint8_t i = 1; i <= working_numDoses; i++ )
                 {
@@ -398,7 +415,7 @@ void task_INSRATE_deliverBolus ( void *arg )
                     // Step Motor 
                     MOTOR_stepX( true, MIN_BOLUS_DELIVERY_STEPS );
                     // Loop Pacing
-                    vTaskDelay(pdMS_TO_TICKS(1200));
+                    vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(1200));
                 }
 
                 // Was Bolus Cancelled - Only Time This Will Be 0 At This Stage Is If Bolus Was Cancelled
@@ -423,7 +440,7 @@ void task_INSRATE_deliverBolus ( void *arg )
             bolusSize = 0;
         }
         // Loop Pacing
-        vTaskDelay( pdMS_TO_TICKS(250) );
+        vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(250) );
     }
 }
 
@@ -434,6 +451,8 @@ void task_INSRATE_rewindPlunger ( void *arg )
 {
     // Log Start Of Rewind Task 
     ESP_LOGI(TAG, "Opening Plunger Rewind Handler Task");
+    // UPDATE LOOP VARIABLES
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     //
     while (1) 
     {
@@ -454,6 +473,8 @@ void task_INSRATE_rewindPlunger ( void *arg )
             MOTOR_takeControl();
             // Log Rewind Of Plunger
             ESP_LOGI(TAG, "Plunger Rewind Starting");
+            //
+            LOGGING_append( plunger_rewindStart, 0 );
             // Loop Until Pot Is In Reset Position
             while ( !ADC_potReset() )
             {
@@ -470,9 +491,11 @@ void task_INSRATE_rewindPlunger ( void *arg )
             rewindPlunger = false;
             // Log Completion Of Task
             ESP_LOGI(TAG, "Plunger Rewind Complete");
+            //
+            LOGGING_append( plunger_rewindFinish, 0 );
         }
         // Loop Pacing
-        vTaskDelay( pdMS_TO_TICKS(250) );
+        vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(250) );
     }
 }
 
@@ -483,6 +506,8 @@ void task_INSRATE_primePlunger ( void *arg )
 {
     // Log Start Of Priming Task 
     ESP_LOGI(TAG, "Opening Prime Plunger Handler Task");
+    // UPDATE LOOP VARIABLES
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     // 
     while (1)
     {
@@ -498,9 +523,13 @@ void task_INSRATE_primePlunger ( void *arg )
                 // Wait For Motor Control To Become Avaliable
                 while ( !MOTOR_avalibleForControl() ) { vTaskDelay( pdMS_TO_TICKS(100) ); }
             }
-            // Take Control Of Motor 
+            // Take Control Of Motor
+            MOTOR_takeControl();
+            // LOG
             ESP_LOGI(TAG, "Requested Prime = %ld Units", working_primeSize);
             ESP_LOGI(TAG, "Priming Plunger Starting");
+            //
+            LOGGING_append( plunger_prime, working_primeSize );
             // Deliver Insulin
             for ( uint8_t i = 1; i <= working_primeSize; i++ )
             {
@@ -527,7 +556,7 @@ void task_INSRATE_primePlunger ( void *arg )
             // Log Completion Of Task
             ESP_LOGI(TAG, "Priming Plunger Complete");
         }
-        vTaskDelay( pdMS_TO_TICKS(250) );
+        vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(250) );
     }
 }
 

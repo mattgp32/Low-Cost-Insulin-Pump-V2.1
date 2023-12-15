@@ -14,6 +14,7 @@
 
 #define LED_HANDLER_DELAY (60*1000)
 
+#define LED_FLASH_NORMAL   200
 #define LED_FLASH_TIME  100
 #define LED_FLASH_TIME2 50
 
@@ -34,6 +35,7 @@ void LED_patternNoBasal          ( void );
 void LED_patternVoltageCritical  ( void );
 void LED_patternVoltageLow       ( void );
 void LED_patternBluetoothON      ( void );
+void LED_patternUSB              ( void );
 void LED_patternNormal           ( void );
 
 void task_LED_handler ( void * );
@@ -109,6 +111,22 @@ void LED_waveFour ( void )
 }
 
 /*
+ * Blip LED1
+ */
+void LED_blip ( void )
+{
+   // PREPARE LEDS
+   LED_off( GPIO_LED1 );
+   LED_off( GPIO_LED2 );
+   LED_off( GPIO_LED3 );
+
+   vTaskDelay( pdMS_TO_TICKS(20) );
+   LED_on( GPIO_LED1 );
+   vTaskDelay( pdMS_TO_TICKS(20) );
+   LED_off( GPIO_LED1 );
+}
+
+/*
  * Flash LED1 Five Times
  */
 void LED_flashFive_single ( void )
@@ -121,9 +139,9 @@ void LED_flashFive_single ( void )
    // FLASH LEDS
    for( int i = 0; i < 5; i++ )
    {
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_on( GPIO_LED1 );
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_off( GPIO_LED1 );
    }
 }
@@ -141,10 +159,10 @@ void LED_flashFive_double ( void )
    // FLASH LEDS
    for(int i = 0; i < 5; i++)
    {
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_on( GPIO_LED1 );
       LED_on( GPIO_LED2 );
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_off( GPIO_LED1 );
       LED_off( GPIO_LED2 );
    }
@@ -163,11 +181,11 @@ void LED_flashFive_triple ( void )
    // FLASH LEDS
    for(int i = 0; i < 5; i++)
    {
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_on( GPIO_LED1 );
       LED_on( GPIO_LED2 );
       LED_on( GPIO_LED3 );
-      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_TIME) );
+      vTaskDelay( pdMS_TO_TICKS(LED_FLASH_NORMAL) );
       LED_off( GPIO_LED1 );
       LED_off( GPIO_LED2 );
       LED_off( GPIO_LED3 );
@@ -185,6 +203,8 @@ void task_LED_handler ( void *args )
 {
    // LOG
    ESP_LOGI(TAG, "Starting LED Handler Task");
+   // UPDATE LOOP VARIABLES
+   TickType_t xLastWakeTime = xTaskGetTickCount();
 
    while (1)
    {
@@ -192,30 +212,35 @@ void task_LED_handler ( void *args )
       if ( ADC_battCritical() ) {
          // ESP_LOGI(TAG, "Pattern: Critically Low Battery Voltage");
          LED_patternVoltageCritical();
-         vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
+         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
       // IS BASAL RATE LOW
       else if( INSRATE_zeroBasalRate() ) {
          // ESP_LOGI(TAG, "Pattern: No Basal Rate Detected");
          LED_patternNoBasal();
-         vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
+         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
       // IS BATTERY IS LOW
       else if ( ADC_battLow() ) {
          // ESP_LOGI(TAG, "Pattern: Low Battery Voltage");
          LED_patternVoltageLow();
-         vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
+         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
       // IS BLUETOOTH IS ON
       else if ( BT_isON() ) {
          // ESP_LOGI(TAG, "Pattern: Bluetooth ON");
          LED_patternBluetoothON();
       }
+      // IS USB CONNECTED
+      else if ( LOGGING_connectedToPC() )
+      {
+         LED_patternUSB();
+      }
       // NORMAL OPERATION
       else {
          // ESP_LOGI(TAG, "Pattern: Normal Operation");
          LED_patternNormal();
-         vTaskDelay(pdMS_TO_TICKS(LED_HANDLER_DELAY));
+         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(LED_HANDLER_DELAY));
       }
    }
 }
@@ -279,6 +304,25 @@ void LED_patternBluetoothON ( void )
    LED_on(GPIO_LED3);
    vTaskDelay(pdMS_TO_TICKS(500));
    LED_off(GPIO_LED3);
+}
+
+/*
+ * LED Pattern When USB Is Connected To The PC
+ */
+void LED_patternUSB ( void )
+{
+   LED_on(GPIO_LED1);
+   vTaskDelay(pdMS_TO_TICKS(500));
+   LED_off(GPIO_LED1);
+   LED_on(GPIO_LED2);
+   vTaskDelay(pdMS_TO_TICKS(500));
+   LED_off(GPIO_LED2);
+   LED_on(GPIO_LED3);
+   vTaskDelay(pdMS_TO_TICKS(500));
+   LED_off(GPIO_LED3);
+   LED_on(GPIO_LED2);
+   vTaskDelay(pdMS_TO_TICKS(500));
+   LED_off(GPIO_LED2);
 }
 
 /*

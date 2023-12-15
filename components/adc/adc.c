@@ -40,8 +40,6 @@
 static void ADC_calcBattVoltage ( void );
 static void ADC_calcPotPosition ( void );
 
-void task_ADC_handler ( void * );
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* PRIVATE VARIABLES                                    */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
