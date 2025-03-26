@@ -28,6 +28,7 @@ void bolus_delivery(void* arg);
 int set_delivery_frequency_test(int freq);
 void rewind_plunge(void* arg);
 bool check_bolus_cancelled();
+void begin_low_power(void*args);
 
 #ifdef _cplusplus
 }

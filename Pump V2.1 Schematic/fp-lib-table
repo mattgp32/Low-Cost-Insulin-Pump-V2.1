@@ -1,0 +1,5 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "DRV8846RGET (1)")(type "KiCad")(uri "//file/Usersm$/mgp57/Home/Downloads/DRV8846RGET (1)")(options "")(descr ""))
+  (lib (name "Bluetooth Pump V2")(type "KiCad")(uri "//file/Usersm$/mgp57/Home/Desktop/Bluetooth Pump V2.pretty")(options "")(descr ""))
+)

@@ -33,10 +33,17 @@
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_gatt_common_api.h"
+#include "esp_bt.h"
+#include "esp_sleep.h"
+#include "leds.h"
+#include "esp_timer.h"
+#include "esp_pm.h"
 
 #include "sdkconfig.h"
 
 #define GATTS_TAG "GATTS_DEMO"
+#define uS_TO_S_FACTOR 1000000ULL
+int run_count = 0;
 
 extern QueueHandle_t bolus_delivery_queue;
 
@@ -76,8 +83,9 @@ static esp_attr_value_t gatts_demo_char1_val =
     .attr_value   = char1_str,
 };
 
-bool disable_BT = false;
-bool enable_BT = false;
+extern bool BT_already_on;
+extern bool switch_on;
+extern int BT_timeout;
 
 static uint8_t adv_config_done = 0;
 #define adv_config_flag      (1 << 0)
@@ -684,6 +692,37 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     } while (0);
 }
 
+void bt_disable_funcs(void)
+{
+    esp_err_t status;
+    //puts("turning off LED2");
+    //led_off(2);
+
+
+	status = esp_bluedroid_disable();
+     vTaskDelay(pdMS_TO_TICKS(300));
+	if (status != ESP_OK) {
+		printf("esp_bluedroid_disable status=%d\n", status);
+		
+	} 
+      status = esp_bluedroid_deinit();
+	if (status != ESP_OK) {
+		printf("esp_bluedroid_deinit status=%d\n", status);
+		
+	}
+	status = esp_bt_controller_disable();
+	if (status != ESP_OK) {
+		printf("esp_bt_controller_disable status=%d\n", status);
+		
+	}
+
+	status = esp_bt_controller_deinit();
+	if (status != ESP_OK) {
+		printf("esp_bt_controller_deinit status=%d\n", status);
+		
+    } 
+}
+
 void run_BT()
 {
     // Create a semaphore to enable system to respond when data is ready:
@@ -698,7 +737,7 @@ void run_BT()
     }
     ESP_ERROR_CHECK( ret );
 
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+   //ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
@@ -766,10 +805,12 @@ void print_transmission(void* arg)
 void receive_BT_data(void* arg)
 {
     for(;;){
+        puts("receive_bt_data begin");
         if (bt_data[15] == 1) {
         xSemaphoreGive(data_ready);
         }
         vTaskDelay(pdMS_TO_TICKS(200));
+        puts("receive_bt_data end");
     }
 }
 
@@ -777,6 +818,7 @@ void process_bt_data(void* arg)
 {
     for(;;)
     {
+        puts("process_bt_data begin");
         if(pdPASS == xSemaphoreTake(data_ready, 0)) {
 
             read_and_store_data(bt_data);
@@ -785,128 +827,47 @@ void process_bt_data(void* arg)
     
 
     vTaskDelay(pdMS_TO_TICKS(200));
+    puts("process_bt_data end");
 }
 }
 
 void BT_off(void* arg)
 {
     for(;;){
+    puts("BT_off begin");
 
-    if(disable_BT == true){
-    esp_err_t status = esp_ble_gatts_app_unregister(PROFILE_A_APP_ID);
-	if (status != ESP_OK) {
-		printf("esp_ble_gatts_app_unregister status=%d\n", status);
-		
-	}
+    if((BT_already_on == true) && (switch_on == true)) 
+    {
+    bt_disable_funcs();
+    vTaskDelay(pdMS_TO_TICKS(200));
+    //puts("BT Manual Switch Off");
 
-	status = esp_bluedroid_disable();
-	if (status != ESP_OK) {
-		printf("esp_bluedroid_disable status=%d\n", status);
-		
-	}
-
-	status = esp_bluedroid_deinit();
-	if (status != ESP_OK) {
-		printf("esp_bluedroid_deinit status=%d\n", status);
-		
-	}
-
-	status = esp_bt_controller_disable();
-	if (status != ESP_OK) {
-		printf("esp_bt_controller_disable status=%d\n", status);
-		
-	}
-
-	status = esp_bt_controller_deinit();
-	if (status != ESP_OK) {
-		printf("esp_bt_controller_deinit status=%d\n", status);
-		
-    }
-	status = esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
-	if (status != ESP_OK) {
-		printf("esp_bt_controller_mem_release status=%d\n", status);
-		
-    }
+    switch_on = false;
+    BT_already_on = false;
     
+    } else if ((BT_already_on == true) && (esp_timer_get_time() > 60 * uS_TO_S_FACTOR))
+    {
+        bt_disable_funcs();
+        //puts("BT Timeout Switch Off");
+        BT_already_on = false;
+    } else {
+    
+    vTaskDelay(pdMS_TO_TICKS(1000));   
+    } puts("BT_off end");
+} 
     }
-    disable_BT = false;
-} vTaskDelay(pdMS_TO_TICKS(10000));
-    }
-
-int state = 0;
 
 void BT_Control_Task(void *arg)
 {
 
     for(;;)
     {
-        if (enable_BT == true)
+        puts("BT_control_task - begin (end wont show because restart)");
+         if((BT_already_on == false) && (switch_on == true))
         {
-            esp_err_t ret;
-
-    // Initialize NVS.
-    ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( ret );
-
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bt_cfg);
-    if (ret) {
-        ESP_LOGE(GATTS_TAG, "%s initialize controller failed: %s\n", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    if (ret) {
-        ESP_LOGE(GATTS_TAG, "%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
-        return;
-    }
-    ret = esp_bluedroid_init();
-    if (ret) {
-        ESP_LOGE(GATTS_TAG, "%s init bluetooth failed: %s\n", __func__, esp_err_to_name(ret));
-        return;
-    }
-    ret = esp_bluedroid_enable();
-    if (ret) {
-        ESP_LOGE(GATTS_TAG, "%s enable bluetooth failed: %s\n", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_ble_gatts_register_callback(gatts_event_handler);
-    if (ret){
-        ESP_LOGE(GATTS_TAG, "gatts register error, error code = %x", ret);
-        return;
-    }
-    ret = esp_ble_gap_register_callback(gap_event_handler);
-    if (ret){
-        ESP_LOGE(GATTS_TAG, "gap register error, error code = %x", ret);
-        return;
-    }
-    ret = esp_ble_gatts_app_register(PROFILE_A_APP_ID);
-    if (ret){
-        ESP_LOGE(GATTS_TAG, "gatts app register error, error code = %x", ret);
-        return;
-    }
-    ret = esp_ble_gatts_app_register(PROFILE_B_APP_ID);
-    if (ret){
-        ESP_LOGE(GATTS_TAG, "gatts app register error, error code = %x", ret);
-        return;
-    }
-    esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
-    if (local_mtu_ret){
-        ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
-        return;
-    }
-            disable_BT = false;
-            enable_BT = false;
-            puts("Bluetooth should now be running");
-        }
-        vTaskDelay(pdMS_TO_TICKS(10000));
+            puts("RESTARTING");
+            esp_restart();
+        
+        }  vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
-

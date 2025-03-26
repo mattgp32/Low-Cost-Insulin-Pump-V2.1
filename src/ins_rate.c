@@ -20,8 +20,11 @@
 #include "driver/gptimer.h"
 #include "motor.h"
 #include "driver/gpio.h"
+#include "esp_sleep.h"
+#include "esp_timer.h"
+#include "adc.h"
 
-#define STEPS_PER_UNIT 775 //(altered based on testing)
+#define STEPS_PER_UNIT 770//(altered based on testing)
 #define SECONDS_TO_MS 1000
 #define THREE_MINUTES 180
 #define SECONDS_IN_AN_HOUR 3600
@@ -29,14 +32,20 @@
 #define MIN_DELIVERY_STEPS 18
 #define MIN_BOLUS_DELIVERY_SIZE 50
 #define MIN_BOLUS_DELIVERY_STEPS 36
+#define uS_TO_S_FACTOR 1000000ULL
 
 uint8_t index_arr[2] = {0};
 time_t esp_time;
 time_t actual_time;
 time_t unix_modifier = 0;
 struct tm * timeinfo;
-
+long long int t_current = 0;
+long long int t_prev = 0;
 QueueHandle_t bolus_delivery_queue;
+SemaphoreHandle_t basal_semaphore = NULL;
+extern bool BT_already_on;
+
+esp_sleep_wakeup_cause_t wake_cause;
 
 TickType_t frequency = 1000;
 int basal_info_array[2];
@@ -59,6 +68,8 @@ bool check_bolus_cancelled() {
 
     if(bolus_size==0){
         cancelled = true;
+        nvs_set_i32(bo_handle, "bolus_size", 0);
+        nvs_commit(bo_handle);
     }
 
     return cancelled;
@@ -201,6 +212,7 @@ int set_delivery_frequency(void)
     }
     else {
         dels_freq = THREE_MINUTES;
+        dels_per_hour = 20;
     }
     basal_info_array[0] = dels_per_hour;
     basal_info_array[1] = basal_rate;
@@ -272,7 +284,7 @@ void read_and_store_data(const char *data)
         printf("Entered prime amount is %d\n", (int)prime_size);
 
         for(int i = 0; i < (int)prime_size; i++){
-            turn_x_steps(false, STEPS_PER_UNIT);
+            turn_x_steps(true, STEPS_PER_UNIT);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
 
@@ -289,12 +301,17 @@ void retreive_data(void* arg)
     int basal_rate = 0;
     int bolus_size = 0;
     
+    long long int elapsed_time;
+    
     setenv("TZ", "UTC-12", 1);
     tzset();
     actual_time = time(&esp_time) + unix_modifier;
     timeinfo = localtime(&actual_time);
-    
+    t_prev = t_current;
+    t_current = esp_timer_get_time();
+    elapsed_time = t_current - t_prev;
     printf ("Current local time and date: %s", asctime(timeinfo));
+    printf("Elapsed time is %lld\n", elapsed_time/1000000);
 
     nvs_handle_t br_handle;
     nvs_handle_t bo_handle;
@@ -313,20 +330,60 @@ void give_insulin(void* arg)
 {
     for(;;)
     {
+        puts("give_insulin begin");
+        // if(xSemaphoreTake(basal_semaphore, portMAX_DELAY))
+        // {
         frequency = set_delivery_frequency() * SECONDS_TO_MS;
         // frequency = set_delivery_frequency_test(500) * SECONDS_TO_MS;
-        led_double_flash();
+        //led_double_flash();
 
-        if (frequency <= 0) {
-            //puts("basal rate is 0");
-            frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
-        } else {
-        //puts("Entered motor control block\n");
-        turn_x_steps(false, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
-        // turn_x_steps(true, (int)(STEPS_PER_UNIT));
+            if (frequency <= 0) {
+                //puts("basal rate is 0");
+                frequency = pdMS_TO_TICKS(THREE_MINUTES*SECONDS_TO_MS);
+            } else {
+            //puts("Entered motor control block\n");
+           // printf("Turning %d steps\n", (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            turn_x_steps(true, (int)(STEPS_PER_UNIT*basal_info_array[1])/(basal_info_array[0]*1000));
+            read_pot();
+            // turn_x_steps(true, (int)(STEPS_PER_UNIT));
+            }
+             
+    //} 
+        
+        vTaskDelay(pdMS_TO_TICKS(frequency));
+        puts("give_insulin end");
+    }
+    
+}
+
+void begin_low_power(void* args)
+{
+    for(;;)
+    {
+        if(BT_already_on == false)
+        {
+            //basal_semaphore = xSemaphoreCreateBinary();
+            puts("goodnight");
+            esp_sleep_enable_ext0_wakeup(GPIO_NUM_5, 0);
+            esp_sleep_enable_timer_wakeup(10*uS_TO_S_FACTOR);
+            esp_light_sleep_start();
+            //wake_cause = esp_sleep_get_wakeup_cause();
+            led_double_flash();
+            
+            // if (wake_cause == ESP_SLEEP_WAKEUP_EXT0)
+            //     {
+            //         puts("RESTARTING");
+            //         led_five_flash();
+            //         esp_restart();
+
+            //     } else if (wake_cause == ESP_SLEEP_WAKEUP_TIMER)
+            //     {
+            //         xSemaphoreGive(basal_semaphore);
+            //         led_five_flash();
+            //         led_five_flash();
+            //     }
         }
-    vTaskDelay(pdMS_TO_TICKS(frequency));
-    //puts("I am working");
+    vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -334,6 +391,7 @@ void bolus_delivery(void* arg)
 {
     for(;;)
     {
+        puts("bolus_delivery begin");
         nvs_handle_t bo_handle;
         int bolus_size = 0;
 
@@ -350,7 +408,7 @@ void bolus_delivery(void* arg)
                     printf("Delivering %d doses of 0.05U\n", n_steps);
                     for(int i = 0; i < n_steps; i++){
                         if(!check_bolus_cancelled()){
-                        turn_x_steps(false, MIN_BOLUS_DELIVERY_STEPS);
+                        turn_x_steps(true, MIN_BOLUS_DELIVERY_STEPS);
                         vTaskDelay(pdMS_TO_TICKS(1200));
                         } else {
                             puts("Bolus Cancelled");
@@ -359,12 +417,13 @@ void bolus_delivery(void* arg)
                     }
 
                     if((bolus_size % MIN_BOLUS_DELIVERY_SIZE) == MIN_DELIVERY_SIZE) {
-                        turn_x_steps(false, MIN_DELIVERY_STEPS);
+                        turn_x_steps(true, MIN_DELIVERY_STEPS);
                         puts("Delivering 1 dose of 0.025U");
                     }
 
                     
                     puts("Bolus delivery complete");
+                     read_pot();
                     //disable_BT = true;
             
             }
@@ -374,23 +433,24 @@ void bolus_delivery(void* arg)
         bolus_ready = false;
        
         vTaskDelay(pdMS_TO_TICKS(1000));
+        puts("bolus_delivery_end");
     } 
 }
 
 void rewind_plunge(void* arg)
 {
     for(;;){
+         puts("rewind_plunge begin");
         if(RW_flag == true) {
-            turn_x_steps(true, STEPS_PER_UNIT*2);
+            turn_x_steps(false, STEPS_PER_UNIT*2);
+            
         }
-
+        read_pot();
         if(pot_read_global <=0){
             RW_flag = false;
         }
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        puts("rewind_plunge end");
     }
     
 }
-
-
-
