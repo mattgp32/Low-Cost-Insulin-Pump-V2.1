@@ -6,7 +6,11 @@ This Git repository represents the final result of multiple design iterations of
 
 The files for this device are split into four main areas: electrical hardware, mechanical hardware, android application, and firmware. This README contains a subsection for each of these aspects, including build instructions, initial setup, and usage. A complete exploded assembly for the device is shown in the image below:
 
- ![Exploded View](/readme_images/pump_render.png)
+<p align="center">
+ <img src="readme_images/pump_render.png" alt="Exploded View" width="300"/>
+</p>
 
- 
+### Electrical Hardware
+PCB schematics and layout were created in KiCad, so you will need to install this to view/edit/order some assemblies. KiCad can be downloaded [here](https://www.kicad.org/download/). I added some components by hand to reduce costs; however I acknowledge not everyone would be comfortable to do so. Therefore, I'll be uploading an EasyEDA file soon which can be uploaded to JLCPCB, and allow you to order an assmebled board more easily.
+
 
