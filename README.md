@@ -13,12 +13,21 @@ The files for this device are split into four main areas: electrical hardware, m
 ### Electrical Hardware
 PCB schematics and layout were created in KiCad, so you will need to install this to view/edit/order some assemblies. KiCad can be downloaded [here](https://www.kicad.org/download/). I added some components by hand to reduce costs; however I acknowledge not everyone would be comfortable to do so. Therefore, I'll be uploading an EasyEDA file soon which can be uploaded to JLCPCB, and allow you to order an assembled board more easily. Expect the total cost of an assembled board to be around US$30.
 
-This PCB utilises an ESP32-S3 SOC as its MCU, and delivers the following functionality for the low-cost pump:
+This PCB utilises an ESP32-S3 SOC as its MCU, and delivers the following key features for the low-cost pump:
 
 1. Wireless communication via BLE
 2. Stepper motor control thorugh interface with DRV8846
 3. Li-Po charging through interface with MCP78371 through USB C 2.0
 4. ADC monitoring of battery level 
 5. ADC monitoring of linear potentiometer to determine position.
+6. LEDs for user feedback and monitoring
+
+#### Build Instructions
+
+
+
+
+
+
    
 
