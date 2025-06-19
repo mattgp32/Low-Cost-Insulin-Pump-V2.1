@@ -76,9 +76,9 @@ void step_motor(bool direction)
 {
 		set_motor_direction(direction);
 		gpio_set_level(STEP, 1);
-		ets_delay_us(800);
+		vTaskDelay(1);
 		gpio_set_level(STEP, 0);
-		ets_delay_us(800);
+		vTaskDelay(1);
 		steps_turned += 1;
 	
 	

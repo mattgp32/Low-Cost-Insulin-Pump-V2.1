@@ -36,8 +36,11 @@
 #define BATT_LOW 1800
 
 #define LED_FLASH_TIME 100
+#define LED_FLASH_TIME2 50
+
 
 extern QueueHandle_t battLevelQueue;
+extern bool BT_already_on;
 
 void buzzer_init(void)
 {
@@ -66,6 +69,7 @@ void buzzer_init(void)
 
 void init_leds()
 {
+   gpio_reset_pin(LED3);
    // initialise all LEDs and set them to be turned off initially
    gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
    gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
@@ -99,39 +103,22 @@ void display_batt_level(void* arg)
 
       //printf("Batt level read as %d mV\n", battlevel);
 
-      if (battlevel > BATT_HIGH)
+      if (battlevel < BATT_MED)
       {
-            led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-
-            printf("Batt High\n");
-
-      } else if (battlevel < BATT_HIGH && battlevel > BATT_MED){
-
-         for(int i = 0; i < 2; i++)
+               for(int i = 0; i < 3; i++)
          {
-            led_on(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-            led_off(LED1);
-            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
-
-            printf("Batt Med\n");
-         }
-      } else {
-
-         for(int i = 0; i < 3; i++)
-         {
-            led_on(LED1);
+            led_wave();
             printf("Batt Low\n");
          }
+
+            // printf("Batt High\n");
+
       }
-      vTaskDelay(pdMS_TO_TICKS(9500));
-      printf("Queue read\n");
+      vTaskDelay(pdMS_TO_TICKS(60000));
+      // printf("Queue read\n");
    }
-   vTaskDelay(pdMS_TO_TICKS(9500));
-   printf("Queue not read\n");
+   vTaskDelay(pdMS_TO_TICKS(60000));
+   // printf("Queue not read\n");
    }
 }
 
@@ -159,6 +146,23 @@ void led_double_flash()
    }
 }
 
+void led_wave()
+{
+   for (int i = 0; i <4;i++)
+   {
+      led_on(LED1);
+      vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_on(LED2);
+      led_off(LED1);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_on(LED3);
+      led_off(LED2);
+       vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME));
+      led_off(LED3);
+   }
+
+}
+
 void annoying_buzzer(void* arg)
 {
    for(;;)
@@ -171,6 +175,7 @@ void annoying_buzzer(void* arg)
 void no_br_warning(void*arg)
 {
    for(;;){
+      puts("no br warning begin");
    int basal_rate = 0;
    nvs_handle_t br_handle;
    nvs_flash_init_partition("rate_storage");
@@ -181,6 +186,59 @@ void no_br_warning(void*arg)
    {
       led_double_flash();
    }
-   vTaskDelay(pdMS_TO_TICKS(10000));
+   vTaskDelay(pdMS_TO_TICKS(120000));
+   puts("no br warning end");
 }
+}
+
+void BT_running_alert(void*args)
+{
+   for(;;)
+   {
+      puts("BT_running_alert - begin");
+      if (BT_already_on == true)
+      {
+      led_on(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
+      led_off(2);
+      vTaskDelay(pdMS_TO_TICKS(500));
+      } else {
+         vTaskDelay(pdMS_TO_TICKS(2000));
+      }
+      puts("BT_running_alert - end");
+   }
+}
+
+void pump_is_alive(void*args)
+{
+   for(;;)
+   {
+      puts("pump_is_alive - begin");
+      if(BT_already_on == false){
+        
+            led_on(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_on(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED3);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED3);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED2);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+             led_on(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+            led_off(LED1);
+            vTaskDelay(pdMS_TO_TICKS(LED_FLASH_TIME2));
+         
+
+      } vTaskDelay(pdMS_TO_TICKS(60000));
+      puts("pump_is_alive - end");
+   }
 }
